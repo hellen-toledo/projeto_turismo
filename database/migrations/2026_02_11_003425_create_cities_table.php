@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('cover_image')->nullable(); 
             $table->foreignId('region_id')->constrained('regions')->onDelete('cascade'); 
             $table->timestamps();
-});
+        });
     }
 
     public function down(): void

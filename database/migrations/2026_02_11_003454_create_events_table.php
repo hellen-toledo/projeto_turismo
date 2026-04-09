@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('location_city'); 
             $table->string('action_link')->nullable(); 
             $table->timestamps();
-});
+        });
     }
 
    
