@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Domain\InterestTags\InterestTag as DomainInterestTag;
 
-class InterestTag extends Model
-{
-    //
-}
+class InterestTag extends DomainInterestTag {}

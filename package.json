@@ -1,17 +1,19 @@
 {
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
-    "type": "module",
     "scripts": {
-        "build": "vite build",
-        "dev": "vite"
+        "backend:serve": "php artisan serve",
+        "backend:test": "php artisan test",
+        "backend:lint": "vendor/bin/pint --test",
+        "frontend:dev": "npm --prefix frontend run dev",
+        "frontend:build": "npm --prefix frontend run build",
+        "frontend:test": "npm --prefix frontend run test",
+        "frontend:lint": "npm --prefix frontend run lint",
+        "test": "npm run backend:test && npm run frontend:test",
+        "lint": "npm run backend:lint && npm run frontend:lint",
+        "dev": "concurrently -c \"#93c5fd,#fdba74\" \"php artisan serve\" \"npm --prefix frontend run dev\" --names=api,frontend --kill-others"
     },
     "devDependencies": {
-        "@tailwindcss/vite": "^4.0.0",
-        "axios": "^1.11.0",
-        "concurrently": "^9.0.1",
-        "laravel-vite-plugin": "^2.0.0",
-        "tailwindcss": "^4.0.0",
-        "vite": "^7.0.7"
+        "concurrently": "^9.0.1"
     }
 }

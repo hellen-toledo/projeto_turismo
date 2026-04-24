@@ -2,13 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Domain\Cities\City as DomainCity;
 
-class City extends Model
-{
-    public function region()
-    {
-        return $this->belongsTo(Region::class);
-    }
-}
-
+class City extends DomainCity {}

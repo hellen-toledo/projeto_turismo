@@ -2,9 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Domain\Events\Event as DomainEvent;
 
-class Event extends Model
-{
-    //
-}
+class Event extends DomainEvent {}

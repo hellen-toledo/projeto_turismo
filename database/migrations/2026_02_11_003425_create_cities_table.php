@@ -6,16 +6,20 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    
     public function up(): void
     {
-       Schema::create('cities', function (Blueprint $table) {
+        Schema::create('cities', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); 
-            $table->text('description'); 
-            $table->string('cover_image')->nullable(); 
-            $table->foreignId('region_id')->constrained('regions')->onDelete('cascade'); 
+            $table->string('name');
+            $table->string('slug')->unique();
+            $table->string('summary', 500)->nullable();
+            $table->text('description');
+            $table->string('cover_image')->nullable();
+            $table->foreignId('region_id')->constrained('regions')->cascadeOnDelete();
+            $table->boolean('is_published')->default(true)->index();
             $table->timestamps();
+
+            $table->index(['region_id', 'is_published']);
         });
     }
 

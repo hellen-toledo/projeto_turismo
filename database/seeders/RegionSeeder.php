@@ -2,17 +2,15 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\Region;
 use Illuminate\Database\Seeder;
 
 class RegionSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
-   public function run(): void
+    public function run(): void
     {
-        \App\Models\Region::create(['name' => 'Chapada dos Veadeiros']);
-        \App\Models\Region::create(['name' => 'Polo Norte/Porangatu']);
+        Region::query()->updateOrCreate(['name' => 'Chapada dos Veadeiros']);
+        Region::query()->updateOrCreate(['name' => 'Serra da Mesa']);
+        Region::query()->updateOrCreate(['name' => 'Vale do Paranã']);
     }
 }

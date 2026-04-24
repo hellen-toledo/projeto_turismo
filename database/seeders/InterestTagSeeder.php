@@ -2,19 +2,21 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\InterestTag;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class InterestTagSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $tags = ['Ecotourism', 'Sport Fishing', 'Lakes', 'Trails'];
+        $tags = ['Ecoturismo', 'Cachoeiras', 'Cultura Popular', 'Gastronomia', 'Turismo Náutico', 'Trilhas'];
+
         foreach ($tags as $tag) {
-            \App\Models\InterestTag::create(['name' => $tag]);
+            InterestTag::query()->updateOrCreate(
+                ['slug' => Str::slug($tag)],
+                ['name' => $tag],
+            );
         }
     }
 }

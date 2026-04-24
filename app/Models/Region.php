@@ -2,13 +2,6 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Domain\Regions\Region as DomainRegion;
 
-class Region extends Model
-{
-    public function cities()
-    {
-        return $this->hasMany(City::class);
-    }
-}
-
+class Region extends DomainRegion {}
