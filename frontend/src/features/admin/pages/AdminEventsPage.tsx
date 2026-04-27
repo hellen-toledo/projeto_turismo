@@ -1,7 +1,6 @@
 import { PencilLine, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { Event } from '../../../shared/types/api';
 import { EmptyState } from '../../../shared/components/EmptyState';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { LoadingState } from '../../../shared/components/LoadingState';
@@ -10,7 +9,7 @@ import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
 import { EventForm } from '../forms/EventForm';
 import { useAdminCities } from '../hooks/useAdminCities';
-import { useAdminEvents, useAdminEventMutations, getEventDisplayStatus } from '../hooks/useAdminEvents';
+import { getEventDisplayStatus, useAdminEvent, useAdminEventMutations, useAdminEvents } from '../hooks/useAdminEvents';
 import { useAdminInterestTags } from '../hooks/useAdminInterestTags';
 import { mapCitiesToOptions, mapTagsToOptions, type AdminFeedback } from '../types/admin';
 
@@ -21,13 +20,14 @@ export const AdminEventsPage = () => {
     perPage: 12,
     search: searchParams.get('q') || undefined,
     published: searchParams.get('published') === '1' ? true : searchParams.get('published') === '0' ? false : undefined,
-    featured: searchParams.get('featured') === '1' ? true : undefined,
+    featured: searchParams.get('featured') === '1' ? true : searchParams.get('featured') === '0' ? false : undefined,
   };
   const { data: eventsResponse, isLoading: loadingEvents, isError: eventsError } = useAdminEvents(filters);
   const { data: citiesResponse, isLoading: loadingCities, isError: citiesError } = useAdminCities({ perPage: 50 });
   const { data: tags, isLoading: loadingTags, isError: tagsError } = useAdminInterestTags();
   const { deleteEvent, deleting } = useAdminEventMutations();
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const { data: selectedEvent, isLoading: loadingSelectedEvent } = useAdminEvent(selectedEventId);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const events = eventsResponse?.data ?? [];
   const cities = citiesResponse?.data ?? [];
@@ -46,6 +46,12 @@ export const AdminEventsPage = () => {
   }
 
   const handleDelete = async (eventId: number) => {
+    const confirmed = window.confirm('Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.');
+
+    if (!confirmed) {
+      return;
+    }
+
     try {
       await deleteEvent(eventId);
       setFeedback({
@@ -53,8 +59,8 @@ export const AdminEventsPage = () => {
         message: 'Evento removido com sucesso.',
       });
 
-      if (selectedEvent?.id === eventId) {
-        setSelectedEvent(null);
+      if (selectedEventId === eventId) {
+        setSelectedEventId(null);
       }
     } catch (error) {
       setFeedback({
@@ -76,7 +82,7 @@ export const AdminEventsPage = () => {
           <button
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
             onClick={() => {
-              setSelectedEvent(null);
+              setSelectedEventId(null);
               setFeedback(null);
             }}
             type="button"
@@ -94,6 +100,7 @@ export const AdminEventsPage = () => {
           <EventForm
             cityOptions={mapCitiesToOptions(cities)}
             event={selectedEvent}
+            isLoadingEvent={loadingSelectedEvent}
             key={selectedEvent?.id ?? 'new-event'}
             tagOptions={mapTagsToOptions(tags)}
           />
@@ -117,6 +124,7 @@ export const AdminEventsPage = () => {
             const next = new URLSearchParams(searchParams);
             const q = String(formData.get('q') || '').trim();
             const published = String(formData.get('published') || '');
+            const featured = String(formData.get('featured') || '');
 
             if (q) {
               next.set('q', q);
@@ -130,8 +138,8 @@ export const AdminEventsPage = () => {
               next.delete('published');
             }
 
-            if (formData.get('featured') === 'on') {
-              next.set('featured', '1');
+            if (featured) {
+              next.set('featured', featured);
             } else {
               next.delete('featured');
             }
@@ -156,10 +164,15 @@ export const AdminEventsPage = () => {
             <option value="1">Publicados</option>
             <option value="0">Rascunhos</option>
           </select>
-          <label className="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
-            <input defaultChecked={filters.featured === true} name="featured" type="checkbox" />
-            Destaques
-          </label>
+          <select
+            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
+            defaultValue={searchParams.get('featured') ?? ''}
+            name="featured"
+          >
+            <option value="">Todos os destaques</option>
+            <option value="1">Somente destaque</option>
+            <option value="0">Sem destaque</option>
+          </select>
           <button className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white" type="submit">
             Aplicar
           </button>
@@ -174,9 +187,13 @@ export const AdminEventsPage = () => {
                     <h3 className="text-lg font-black text-slate-900">{event.title}</h3>
                     <p className="mt-1 text-sm text-slate-500">{event.city?.name ?? 'Sem cidade'} • {new Date(event.startsAt).toLocaleString('pt-BR')}</p>
                   </div>
-                  <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
-                    {getEventDisplayStatus(event)}
-                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {getEventDisplayStatus(event).map((status) => (
+                      <span key={`${event.id}-${status}`} className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
+                        {status}
+                      </span>
+                    ))}
+                  </div>
                 </div>
 
                 <p className="mt-4 line-clamp-3 text-sm text-slate-600">{event.description}</p>
@@ -185,7 +202,7 @@ export const AdminEventsPage = () => {
                   <button
                     className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
                     onClick={() => {
-                      setSelectedEvent(event);
+                      setSelectedEventId(event.id);
                       setFeedback(null);
                     }}
                     type="button"

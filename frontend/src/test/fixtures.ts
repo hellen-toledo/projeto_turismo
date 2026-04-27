@@ -35,7 +35,7 @@ export const makeEvent = (overrides: Partial<Event> = {}): Event => ({
   startsAt: '2026-09-10T09:00:00.000Z',
   endsAt: '2026-09-10T18:00:00.000Z',
   coverImage: 'https://example.com/event.jpg',
-  externalUrl: 'https://example.com/festival',
+  externalUrl: 'https://turismo.go.gov.br/festival-do-lago',
   isFeatured: true,
   isPublished: true,
   city: {

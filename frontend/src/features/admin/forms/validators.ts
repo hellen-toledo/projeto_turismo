@@ -36,6 +36,27 @@ export const validateCityForm = (values: CityFormValues): AdminValidationErrors 
     errors.coverImage = 'Informe uma URL válida para a imagem.';
   }
 
+  values.attractions.forEach((attraction, index) => {
+    if (!attraction.name.trim() && !attraction.description.trim() && !attraction.imageUrl.trim()) {
+      errors[`attractions.${index}.name`] = 'Informe o nome da atração ou remova o bloco vazio.';
+      return;
+    }
+
+    if (!attraction.name.trim()) {
+      errors[`attractions.${index}.name`] = 'Informe o nome da atração.';
+    }
+
+    if (!isValidUrl(attraction.imageUrl)) {
+      errors[`attractions.${index}.imageUrl`] = 'Informe uma URL válida para a imagem da atração.';
+    }
+  });
+
+  values.gallery.forEach((item, index) => {
+    if (!item.mediaAssetId || !item.url.trim()) {
+      errors[`gallery.${index}.mediaAssetId`] = 'Envie uma imagem para a galeria ou remova o bloco.';
+    }
+  });
+
   return errors;
 };
 
@@ -69,6 +90,12 @@ export const validateEventForm = (values: EventFormValues): AdminValidationError
   if (!isValidUrl(values.externalUrl)) {
     errors.externalUrl = 'Informe uma URL válida para o link externo.';
   }
+
+  values.gallery.forEach((item, index) => {
+    if (!item.mediaAssetId || !item.url.trim()) {
+      errors[`gallery.${index}.mediaAssetId`] = 'Envie uma imagem para a galeria ou remova o bloco.';
+    }
+  });
 
   return errors;
 };

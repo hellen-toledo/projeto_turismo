@@ -4,7 +4,9 @@ import { AdminLayout } from '../features/admin/layouts/AdminLayout';
 import { AdminCitiesPage } from '../features/admin/pages/AdminCitiesPage';
 import { AdminEventsPage } from '../features/admin/pages/AdminEventsPage';
 import { AdminHomePage } from '../features/admin/pages/AdminHomePage';
+import { AdminInterestTagsPage } from '../features/admin/pages/AdminInterestTagsPage';
 import { AdminLoginPage } from '../features/admin/pages/AdminLoginPage';
+import { AdminRegionsPage } from '../features/admin/pages/AdminRegionsPage';
 import { CityDetailsPage } from '../pages/CityDetailsPage';
 import { CitiesPage } from '../pages/CitiesPage';
 import { EventsPage } from '../pages/EventsPage';
@@ -71,6 +73,14 @@ export const router = createBrowserRouter([
           {
             path: 'events',
             element: <AdminEventsPage />,
+          },
+          {
+            path: 'regions',
+            element: <AdminRegionsPage />,
+          },
+          {
+            path: 'interest-tags',
+            element: <AdminInterestTagsPage />,
           },
         ],
       },

@@ -5,11 +5,33 @@ interface EventCardProps {
   event: Event;
 }
 
+const hasUsableExternalUrl = (value: string | null) => {
+  if (!value) {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    return !['example.com', 'example.org', 'example.net'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+};
+
 export const EventCard = ({ event }: EventCardProps) => {
   const { day, month } = formatEventDate(event.startsAt);
+  const showExternalLink = hasUsableExternalUrl(event.externalUrl);
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-sm transition-shadow hover:shadow-md hover:border-gray-700">
+      <div className="mb-6 overflow-hidden rounded-2xl border border-gray-800 bg-gray-950">
+        <img
+          src={event.coverImage ?? 'https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=1200&auto=format&fit=crop'}
+          alt={event.coverImage ? `Imagem do evento ${event.title}` : `Imagem ilustrativa do evento ${event.title}`}
+          className="h-52 w-full object-cover"
+        />
+      </div>
+
       <div className="mb-6 flex items-center gap-4">
         <div className="min-w-[72px] rounded-xl bg-green-900/30 p-3 text-center text-green-400">
           <span className="block text-2xl font-bold leading-none">{day}</span>
@@ -31,9 +53,9 @@ export const EventCard = ({ event }: EventCardProps) => {
       <p className="mb-6 line-clamp-3 text-sm leading-relaxed text-gray-400">{event.description}</p>
 
       <div className="mt-auto">
-        {event.externalUrl ? (
+        {showExternalLink ? (
           <a
-            href={event.externalUrl}
+            href={event.externalUrl ?? undefined}
             target="_blank"
             rel="noreferrer"
             className="block w-full text-center rounded-xl border border-green-600 py-3 font-bold text-green-500 transition-colors hover:bg-green-600 hover:text-white"

@@ -8,6 +8,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
@@ -76,6 +77,16 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'message' => 'Forbidden.',
             ], 403);
+        });
+
+        $exceptions->render(function (ConflictHttpException $exception, Request $request) {
+            if (! $request->is('api/*')) {
+                return null;
+            }
+
+            return response()->json([
+                'message' => $exception->getMessage() ?: 'Resource conflict.',
+            ], 409);
         });
 
         $exceptions->render(function (MethodNotAllowedHttpException $exception, Request $request) {

@@ -8,11 +8,10 @@ import { PaginationControls } from '../../../shared/components/PaginationControl
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
 import { CityForm } from '../forms/CityForm';
-import { getCityDisplayStatus, useAdminCities, useAdminCityMutations } from '../hooks/useAdminCities';
+import { getCityDisplayStatus, useAdminCities, useAdminCity, useAdminCityMutations } from '../hooks/useAdminCities';
 import { useAdminInterestTags } from '../hooks/useAdminInterestTags';
 import { useAdminRegions } from '../hooks/useAdminRegions';
 import { mapRegionsToOptions, mapTagsToOptions, type AdminFeedback } from '../types/admin';
-import type { City } from '../../../shared/types/api';
 
 export const AdminCitiesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,7 +25,8 @@ export const AdminCitiesPage = () => {
   const { data: regions, isLoading: loadingRegions, isError: regionsError } = useAdminRegions();
   const { data: tags, isLoading: loadingTags, isError: tagsError } = useAdminInterestTags();
   const { deleteCity, deleting } = useAdminCityMutations();
-  const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
+  const { data: selectedCity, isLoading: loadingSelectedCity } = useAdminCity(selectedCityId);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const cities = citiesResponse?.data ?? [];
 
@@ -44,6 +44,12 @@ export const AdminCitiesPage = () => {
   }
 
   const handleDelete = async (cityId: number) => {
+    const confirmed = window.confirm('Tem certeza que deseja excluir esta cidade? Esta ação não pode ser desfeita.');
+
+    if (!confirmed) {
+      return;
+    }
+
     try {
       await deleteCity(cityId);
       setFeedback({
@@ -51,8 +57,8 @@ export const AdminCitiesPage = () => {
         message: 'Cidade removida com sucesso.',
       });
 
-      if (selectedCity?.id === cityId) {
-        setSelectedCity(null);
+      if (selectedCityId === cityId) {
+        setSelectedCityId(null);
       }
     } catch (error) {
       setFeedback({
@@ -74,7 +80,7 @@ export const AdminCitiesPage = () => {
           <button
             className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
             onClick={() => {
-              setSelectedCity(null);
+              setSelectedCityId(null);
               setFeedback(null);
             }}
             type="button"
@@ -91,6 +97,7 @@ export const AdminCitiesPage = () => {
         <div className="mt-6">
           <CityForm
             city={selectedCity}
+            isLoadingCity={loadingSelectedCity}
             key={selectedCity?.id ?? 'new-city'}
             regionOptions={mapRegionsToOptions(regions)}
             tagOptions={mapTagsToOptions(tags)}
@@ -172,7 +179,7 @@ export const AdminCitiesPage = () => {
                   <button
                     className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
                     onClick={() => {
-                      setSelectedCity(city);
+                      setSelectedCityId(city.id);
                       setFeedback(null);
                     }}
                     type="button"

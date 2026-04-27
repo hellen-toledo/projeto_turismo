@@ -30,7 +30,7 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::post('/auth/logout', [AdminAuthController::class, 'logout'])->name('auth.logout');
 
             Route::apiResource('cities', AdminCityController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
-            Route::apiResource('events', AdminEventController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::apiResource('events', AdminEventController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::apiResource('regions', AdminRegionController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::apiResource('media', AdminMediaController::class)
                 ->parameters(['media' => 'media'])

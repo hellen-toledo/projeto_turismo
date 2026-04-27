@@ -26,6 +26,11 @@ export const createAdminCity = async (values: CityFormValues): Promise<City> => 
   return data;
 };
 
+export const getAdminCity = async (cityId: number): Promise<City> => {
+  const { data } = await apiClient.get(apiPaths.admin.city(cityId));
+  return data;
+};
+
 export const updateAdminCity = async (cityId: number, values: CityFormValues): Promise<City> => {
   const { data } = await apiClient.patch(apiPaths.admin.city(cityId), mapCityPayload(values));
   return data;
@@ -44,4 +49,18 @@ const mapCityPayload = (values: CityFormValues) => ({
   regionId: Number(values.regionId),
   isPublished: values.isPublished,
   interestTagIds: values.interestTagIds.map(Number),
+  gallery: values.gallery.map((item) => ({
+    mediaAssetId: item.mediaAssetId,
+    altText: item.altText.trim() || null,
+    sortOrder: item.sortOrder,
+    isCover: item.isCover,
+  })),
+  attractions: values.attractions.map((item) => ({
+    id: item.id,
+    name: item.name.trim(),
+    description: item.description.trim() || null,
+    imageUrl: item.imageUrl.trim() || null,
+    sortOrder: item.sortOrder,
+    isPublished: item.isPublished,
+  })),
 });

@@ -54,7 +54,7 @@ describe('EventsPage', () => {
     mockUseEvents.mockReturnValue(
       createQueryState({
         data: makePaginatedResponse([
-          makeEvent({ id: 1, title: 'Festival do Lago' }),
+          makeEvent({ id: 1, title: 'Festival do Lago', coverImage: 'https://example.com/festival.jpg' }),
           makeEvent({ id: 2, title: 'Feira do Cerrado', slug: 'feira-do-cerrado' }),
         ]),
       }),
@@ -65,6 +65,23 @@ describe('EventsPage', () => {
     expect(screen.getByRole('heading', { name: 'Eventos' })).toBeInTheDocument();
     expect(screen.getByText('Festival do Lago')).toBeInTheDocument();
     expect(screen.getByText('Feira do Cerrado')).toBeInTheDocument();
+    expect(screen.getByAltText('Imagem do evento Festival do Lago')).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: /Abrir detalhes externos do evento/i })).toHaveLength(2);
+  });
+
+  it('does not render the external CTA for placeholder example domains', () => {
+    mockUseEvents.mockReturnValue(
+      createQueryState({
+        data: makePaginatedResponse([
+          makeEvent({ id: 1, title: 'Festival Placeholder', externalUrl: 'https://example.com/festival' }),
+        ]),
+      }),
+    );
+
+    renderWithProviders(<EventsPage />);
+
+    expect(screen.getByText('Festival Placeholder')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Abrir detalhes externos do evento/i })).not.toBeInTheDocument();
+    expect(screen.getByText('Em breve')).toBeInTheDocument();
   });
 });

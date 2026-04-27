@@ -20,6 +20,10 @@ export const apiPaths = {
     events: '/admin/events',
     event: (eventId: number) => `/admin/events/${eventId}`,
     regions: '/admin/regions',
+    region: (regionId: number) => `/admin/regions/${regionId}`,
     interestTags: '/admin/interest-tags',
+    interestTag: (tagId: number) => `/admin/interest-tags/${tagId}`,
+    media: '/admin/media',
+    mediaItem: (mediaId: number) => `/admin/media/${mediaId}`,
   },
 } as const;

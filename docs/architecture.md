@@ -2,76 +2,149 @@
 
 ## Visão geral
 
-Este repositório adota o padrão `backend Laravel API + frontend React/Vite separado`.
+O projeto segue o modelo:
 
-- O backend Laravel é a fonte de verdade para domínio, banco de dados e endpoints HTTP.
-- O frontend em `frontend/` é uma SPA independente, consumindo a API por HTTP.
-- Não há renderização server-side de páginas do produto via Blade como parte do fluxo principal.
+- backend Laravel API
+- frontend React/Vite separado em `frontend/`
 
-## Responsabilidades por camada
+O backend é a fonte de verdade para domínio, persistência, autenticação, autorização e contratos HTTP. O frontend é uma SPA consumidora da API oficial em `/api/v1`.
 
-### Backend Laravel
+## Convenções ativas
 
-Responsável por:
+- base oficial da API: `/api/v1`
+- área administrativa: `/api/v1/admin`
+- chaves JSON serializadas para o frontend em `camelCase`
+- validação de entrada em `FormRequest`
+- respostas estruturadas em `Resource`
+- regras de negócio em `app/Application`
+- models Eloquent em `app/Domain`
 
-- entrada HTTP em controllers, requests e resources
-- casos de uso simples em `app/Application`
-- modelos de domínio em `app/Domain`
-- persistência com Eloquent e migrations
-- autenticação e autorização
-- validação de entrada
-- serialização de respostas JSON
-- contratos HTTP da API
+As rotas legadas fora de `/api/v1` não fazem parte do fluxo ativo atual.
 
-Não deve ser responsável por:
+## Backend
 
-- layout da aplicação web
-- roteamento de UI da SPA
-- cache de interface no navegador
+### Camadas
 
-### Frontend React/Vite
+- `app/Domain`
+  Modelos Eloquent e relações do domínio.
 
-Responsável por:
+- `app/Application`
+  Actions e regras de negócio.
 
-- componentes e interface do usuário
-- roteamento client-side
-- chamadas HTTP para a API
-- estado de tela e cache client-side
-- experiência de navegação da SPA
+- `app/Http/Controllers/Api`
+  Entrada HTTP fina, delegando para requests, actions e resources.
 
-Não deve ser responsável por:
+- `app/Http/Requests`
+  Validação, autorização e normalização.
 
-- regras centrais de domínio
-- acesso direto ao banco
-- serialização de contratos da API
-- autenticação de servidor
+- `app/Http/Resources`
+  Serialização JSON.
+
+- `app/Policies`
+  Autorização por recurso.
+
+### Segurança
+
+Admin:
+
+- autenticação por Sanctum
+- middleware `auth:sanctum`
+- gate `can:access-admin`
+- policies por recurso
+
+Estados de erro da API:
+
+- `401` não autenticado
+- `403` sem permissão
+- `409` conflito de integridade
+- `422` validação
+
+### Integridade operacional da Fase 4
+
+As regras de exclusão ficam explicitadas nas actions:
+
+- regiões com cidades vinculadas retornam conflito
+- cidades com eventos vinculados retornam conflito
+- mídia em uso por cidade ou evento retorna conflito
+
+Essa decisão evita deleções acidentais em cascata no fluxo administrativo, mesmo quando o banco possui relações com `cascadeOnDelete`.
+
+### Mídia
+
+O fluxo de upload usa:
+
+- model `MediaAsset`
+- disk `public`
+- diretório `tourism/media/YYYY/MM`
+
+As cidades e eventos se relacionam com mídia por tabelas pivot:
+
+- `city_media_asset`
+- `event_media_asset`
+
+Cada vínculo suporta:
+
+- `sort_order`
+- `alt_text`
+- `is_cover`
+
+`coverImage` continua sendo um campo de compatibilidade por URL. Quando esse campo estiver vazio, os resources públicos usam a mídia marcada como capa na galeria.
+
+### Entidades administrativas da Fase 4
+
+- `Region`
+- `InterestTag`
+- `City`
+- `CityAttraction`
+- `Event`
+- `MediaAsset`
+
+## Frontend
+
+### Organização
+
+- `frontend/src/features`
+  Organização por feature.
+
+- `frontend/src/shared/lib/api`
+  Cliente HTTP único, configuração base e utilitários comuns.
+
+- `frontend/src/shared/components`
+  Componentes reutilizáveis.
+
+### Estratégia de dados
+
+- React Query para leitura, cache e invalidação
+- APIs por feature em `frontend/src/features/*/api`
+- nenhum acesso HTTP direto em páginas fora da camada apropriada
+
+### Painel administrativo
+
+O painel atual cobre:
+
+- cidades
+- eventos
+- regiões
+- tags de interesse
+- upload administrativo de mídia
+
+Fluxos relevantes:
+
+- `ImageUploadField` envia mídia para `/api/v1/admin/media`
+- formulários de cidade e evento referenciam `mediaAssetId` na galeria
+- formulários administrativos invalidam queries relacionadas após create, update e delete
 
 ## Fluxo de dados
 
-1. O usuário interage com a SPA em `frontend/`.
-2. O frontend consulta a API Laravel em `/api/*`.
-3. O controller recebe a requisição e delega a validação para um `FormRequest`.
-4. Uma `Action` em `app/Application` executa o caso de uso.
-5. O modelo de domínio em `app/Domain` persiste ou consulta os dados.
-6. Um `Resource` serializa a resposta JSON.
-7. O frontend atualiza UI e cache client-side com os dados recebidos.
+1. A SPA envia requisição HTTP para `/api/v1/*`
+2. O controller recebe a entrada
+3. Um `FormRequest` valida e autoriza
+4. Uma action em `app/Application` executa o caso de uso
+5. Models em `app/Domain` consultam ou persistem o banco
+6. Um `Resource` serializa a resposta
+7. O frontend atualiza tela e cache
 
-## Convenções de nomes
-
-- Classes PHP: `StudlyCase`
-- Controllers de API: `App\\Http\\Controllers\\Api\\*Controller`
-- Requests de validação: `App\\Http\\Requests\\*Request`
-- Resources JSON: `App\\Http\\Resources\\*Resource`
-- Actions de aplicação: `App\\Application\\<Contexto>\\<Verbo><Entidade>Action`
-- Modelos de domínio: `App\\Domain\\<Contexto>\\<Entidade>`
-- Wrappers legados de compatibilidade permanecem em `App\\Models` quando necessário
-- Endpoints canônicos: substantivos plurais em inglês sob `/api/v1`, como `/api/v1/cities` e `/api/v1/events`
-- Aliases legados em português podem existir temporariamente para compatibilidade
-- Componentes React: `PascalCase`
-- Hooks React: prefixo `use`, como `useCities`, `useEvents` e `useAdminAuth`
-- Serviços HTTP do frontend: centralizados por feature em `frontend/src/features/*/api` e em `frontend/src/shared/lib/api`
-
-## Como rodar localmente
+## Execução local
 
 ### Backend
 
@@ -79,11 +152,11 @@ Não deve ser responsável por:
 composer install
 cp .env.example .env
 php artisan key:generate
-php artisan migrate
+touch database/database.sqlite
+php artisan migrate --seed
+php artisan storage:link
 php artisan serve
 ```
-
-API local padrão: `http://localhost:8000`
 
 ### Frontend
 
@@ -93,54 +166,34 @@ npm install
 npm run dev
 ```
 
-Frontend local padrão: `http://localhost:5173`
-
-Se necessário, configure:
+### Variável principal do frontend
 
 ```bash
 VITE_API_URL=http://localhost:8000/api/v1
 ```
 
-### Execução combinada
+## Qualidade e validação
 
-Pelo root do projeto:
-
-```bash
-composer setup
-composer dev
-```
-
-Ou:
+No root:
 
 ```bash
-npm install
-npm run dev
+npm run backend:test
+npm run backend:lint
+npm run frontend:test
+npm run frontend:lint
+npm run frontend:build
 ```
 
-## Organização do projeto
+Atalhos agregados:
 
-- `routes/api.php`: endpoints da API
-- `routes/web.php`: apenas metadados básicos do backend e rotas web mínimas
-- `app/Http/Controllers/Api`: controllers HTTP da API
-- `app/Http/Requests`: validação e normalização de entrada
-- `app/Http/Resources`: serialização JSON
-- `app/Application`: actions e casos de uso
-- `app/Domain`: modelos e regras do domínio
-- `frontend/src`: código da SPA
+```bash
+npm run test
+npm run lint
+npm run build
+```
 
-## Padrão CRUD adotado
+## Limitações conhecidas
 
-Para `cities` e `events`, o backend segue o mesmo fluxo:
-
-- `index`: controller chama `List*Action` e retorna `Resource::collection(...)`
-- `show`: controller chama `Show*Action` e retorna `Resource`
-- `store`: `FormRequest` valida, `Create*Action` persiste, `Resource` responde com `201`
-- `update`: `FormRequest` valida, `Update*Action` altera o registro, `Resource` responde com `200`
-- `destroy`: controller chama `Delete*Action` e responde `204`
-
-## Notas de compatibilidade
-
-- O frontend não foi movido para dentro do Laravel.
-- O backend continua compatível com a estrutura Laravel existente.
-- Foram removidos os artefatos operacionais do frontend padrão do Laravel para evitar duplicidade arquitetural.
-- Os aliases legados fora de `/api/v1` devem existir apenas temporariamente e marcados como deprecated.
+- o frontend público ainda não possui página própria de detalhe do evento
+- tags de interesse ainda não expõem contadores de uso no contrato da API
+- o bloco comentado de aliases legados em `routes/api.php` serve apenas como referência histórica e não como parte ativa da arquitetura

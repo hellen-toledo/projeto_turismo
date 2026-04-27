@@ -56,6 +56,32 @@ export interface InterestTag {
   id: number;
   name: string;
   slug: string;
+  citiesCount?: number;
+  eventsCount?: number;
+  usageCount?: number;
+}
+
+export interface MediaAsset {
+  id: number;
+  url: string;
+  path?: string;
+  originalName?: string;
+  mimeType?: string;
+  size: number;
+  collection?: 'cover' | 'gallery' | 'general' | null;
+  altText?: string | null;
+  sortOrder?: number;
+  isCover?: boolean;
+  createdAt?: string;
+}
+
+export interface CityAttraction {
+  id: number;
+  name: string;
+  description?: string | null;
+  imageUrl?: string | null;
+  sortOrder?: number;
+  isPublished?: boolean;
 }
 
 export interface City {
@@ -68,6 +94,8 @@ export interface City {
   isPublished: boolean;
   region?: RegionSummary;
   interestTags?: InterestTag[];
+  gallery?: MediaAsset[];
+  attractions?: CityAttraction[];
 }
 
 export interface EventCitySummary {
@@ -89,6 +117,7 @@ export interface Event {
   isPublished: boolean;
   city?: EventCitySummary;
   interestTags?: InterestTag[];
+  gallery?: MediaAsset[];
 }
 
 export interface AuthResponse {

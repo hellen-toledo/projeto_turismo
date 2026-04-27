@@ -1,3 +1,4 @@
+import { ImagePlus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { Event } from '../../../shared/types/api';
 import { FormActions } from '../../../shared/components/form/FormActions';
@@ -10,18 +11,22 @@ import { TextareaField } from '../../../shared/components/form/TextareaField';
 import { ToggleField } from '../../../shared/components/form/ToggleField';
 import { getApiErrorMessage, getApiValidationErrors } from '../../../shared/lib/api/getApiErrorMessage';
 import { useAdminEventMutations } from '../hooks/useAdminEvents';
-import type { AdminFeedback, AdminOption, AdminValidationErrors, EventFormValues } from '../types/admin';
-import { createEmptyEventForm, mapEventToFormValues } from '../types/admin';
+import type { AdminFeedback, AdminOption, AdminValidationErrors, CityGalleryItemFormValue, EventFormValues } from '../types/admin';
+import { createEmptyCityGalleryItem, createEmptyEventForm, mapEventToFormValues } from '../types/admin';
 import { validateEventForm } from './validators';
 
 interface EventFormProps {
   event?: Event | null;
+  isLoadingEvent?: boolean;
   cityOptions: AdminOption[];
   tagOptions: AdminOption[];
 }
 
-export const EventForm = ({ cityOptions, event, tagOptions }: EventFormProps) => {
-  const [values, setValues] = useState<EventFormValues>(event ? mapEventToFormValues(event) : createEmptyEventForm());
+const getNestedError = (errors: AdminValidationErrors, path: string) => errors[path];
+
+export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptions }: EventFormProps) => {
+  const createInitialValues = () => (event ? mapEventToFormValues(event) : createEmptyEventForm());
+  const [values, setValues] = useState<EventFormValues>(createInitialValues);
   const [errors, setErrors] = useState<AdminValidationErrors>({});
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const { createEvent, updateEvent, creating, updating } = useAdminEventMutations();
@@ -33,6 +38,13 @@ export const EventForm = ({ cityOptions, event, tagOptions }: EventFormProps) =>
       ...current,
       [field]: value,
     }));
+  };
+
+  const updateGalleryItem = (itemId: string, updater: (item: CityGalleryItemFormValue) => CityGalleryItemFormValue) => {
+    setFieldValue(
+      'gallery',
+      values.gallery.map((item) => (item.id === itemId ? updater(item) : item)),
+    );
   };
 
   const handleSubmit = async (submitEvent: React.FormEvent<HTMLFormElement>) => {
@@ -81,6 +93,42 @@ export const EventForm = ({ cityOptions, event, tagOptions }: EventFormProps) =>
       }
     }
   };
+
+  const addGalleryItem = () => {
+    setFieldValue('gallery', [...values.gallery, createEmptyCityGalleryItem(values.gallery.length)]);
+  };
+
+  const removeGalleryItem = (itemId: string) => {
+    const nextGallery = values.gallery.filter((item) => item.id !== itemId);
+    const normalizedGallery = nextGallery.map((item, index) => ({
+      ...item,
+      sortOrder: index,
+      isCover: nextGallery.length === 1 ? true : item.isCover,
+    }));
+
+    if (normalizedGallery.length > 0 && normalizedGallery.every((item) => !item.isCover)) {
+      normalizedGallery[0] = {
+        ...normalizedGallery[0],
+        isCover: true,
+      };
+    }
+
+    setFieldValue('gallery', normalizedGallery);
+  };
+
+  const markGalleryCover = (itemId: string) => {
+    setFieldValue(
+      'gallery',
+      values.gallery.map((item) => ({
+        ...item,
+        isCover: item.id === itemId,
+      })),
+    );
+  };
+
+  if (isLoadingEvent) {
+    return <div className="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-8 text-sm text-slate-500">Carregando dados completos do evento...</div>;
+  }
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
@@ -171,15 +219,125 @@ export const EventForm = ({ cityOptions, event, tagOptions }: EventFormProps) =>
       />
 
       <ImageUploadField
+        altText={values.coverImageAltText}
         error={errors.coverImage}
-        hint="Usa URL pública no momento, mas o componente já isola a futura troca para upload real."
+        hint="Aceita URL manual ou upload real para o painel administrativo."
         id="event-cover-image"
         label="Imagem de capa"
+        onAltTextChange={(value) => {
+          setFieldValue('coverImageAltText', value);
+        }}
         onChange={(value) => {
           setFieldValue('coverImage', value);
         }}
+        uploadCollection="cover"
         value={values.coverImage}
       />
+
+      <section className="space-y-4 rounded-[28px] border border-slate-200 bg-slate-50/70 p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700">Galeria</p>
+            <h2 className="mt-1 text-xl font-black text-slate-900">Imagens complementares</h2>
+            <p className="mt-1 text-sm text-slate-500">Associe mídias do painel, ajuste ordem editorial e marque a capa quando desejar usar MediaAsset.</p>
+          </div>
+          <button
+            className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
+            onClick={addGalleryItem}
+            type="button"
+          >
+            <ImagePlus className="h-4 w-4" />
+            Adicionar imagem
+          </button>
+        </div>
+
+        {values.gallery.length ? (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {values.gallery.map((item, index) => (
+              <article key={item.id} className="space-y-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">Imagem {index + 1}</p>
+                    <p className="text-xs text-slate-500">Controle a ordem e defina a capa editorial da galeria.</p>
+                  </div>
+                  <button
+                    className="inline-flex items-center gap-2 rounded-full border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                    onClick={() => {
+                      removeGalleryItem(item.id);
+                    }}
+                    type="button"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Remover
+                  </button>
+                </div>
+
+                <ImageUploadField
+                  allowManualUrl={false}
+                  altText={item.altText}
+                  error={getNestedError(errors, `gallery.${index}.mediaAssetId`)}
+                  hint="Use o upload do painel para manter o vínculo com MediaAsset."
+                  id={`event-gallery-${item.id}`}
+                  label="Arquivo da galeria"
+                  onAltTextChange={(value) => {
+                    updateGalleryItem(item.id, (current) => ({
+                      ...current,
+                      altText: value,
+                    }));
+                  }}
+                  onChange={(value) => {
+                    updateGalleryItem(item.id, (current) => ({
+                      ...current,
+                      url: value,
+                    }));
+                  }}
+                  onUploadComplete={(media) => {
+                    updateGalleryItem(item.id, (current) => ({
+                      ...current,
+                      mediaAssetId: media.id,
+                      url: media.url,
+                      altText: media.altText ?? current.altText,
+                      originalName: media.originalName,
+                      size: media.size,
+                    }));
+                  }}
+                  uploadCollection="gallery"
+                  value={item.url}
+                />
+
+                <div className="grid gap-4 sm:grid-cols-[120px_1fr]">
+                  <TextInput
+                    id={`event-gallery-order-${item.id}`}
+                    label="Ordem"
+                    min={0}
+                    onChange={(evt) => {
+                      updateGalleryItem(item.id, (current) => ({
+                        ...current,
+                        sortOrder: Number(evt.target.value || 0),
+                      }));
+                    }}
+                    type="number"
+                    value={String(item.sortOrder)}
+                  />
+                  <ToggleField
+                    checked={item.isCover}
+                    description="Quando marcada, esta mídia passa a ser a capa via galeria do evento."
+                    id={`event-gallery-cover-${item.id}`}
+                    label="Usar como capa"
+                    onChange={() => {
+                      markGalleryCover(item.id);
+                    }}
+                  />
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-sm text-slate-500">
+            Nenhuma imagem complementar adicionada.
+          </div>
+        )}
+      </section>
 
       <TagMultiSelect
         hint="Estrutura pronta para filtros editoriais e curadoria posterior."
@@ -216,7 +374,7 @@ export const EventForm = ({ cityOptions, event, tagOptions }: EventFormProps) =>
         <button
           className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
           onClick={() => {
-            setValues(event ? mapEventToFormValues(event) : createEmptyEventForm());
+            setValues(createInitialValues());
             setErrors({});
             setFeedback(null);
           }}

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Application\Events\CreateEventAction;
 use App\Application\Events\DeleteEventAction;
 use App\Application\Events\ListEventsAction;
+use App\Application\Events\ShowEventAction;
 use App\Application\Events\UpdateEventAction;
 use App\Domain\Events\Event;
 use App\Http\Controllers\Controller;
@@ -22,6 +23,13 @@ class AdminEventController extends Controller
         $this->authorize('viewAny', Event::class);
 
         return EventResource::collection($listEvents($request->validated(), true));
+    }
+
+    public function show(Event $event, ShowEventAction $showEvent): EventResource
+    {
+        $this->authorize('view', $event);
+
+        return new EventResource($showEvent($event));
     }
 
     public function store(StoreEventRequest $request, CreateEventAction $createEvent): Response

@@ -108,7 +108,92 @@ describe('CityDetailsPage', () => {
     expect(screen.getByText('Porta de entrada da Chapada.')).toBeInTheDocument();
     expect(screen.getByText('Ecoturismo')).toBeInTheDocument();
     expect(screen.getByText('Trilhas')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '← Voltar para cidades' })).toHaveAttribute('href', '/cidades');
+    expect(screen.getByRole('link', { name: 'Voltar para a listagem de cidades' })).toHaveAttribute('href', '/cidades');
+  });
+
+  it('renders published attractions and hides unpublished ones', () => {
+    mockUseCity.mockReturnValue(
+      createQueryState({
+        data: makeCity({
+          attractions: [
+            {
+              id: 1,
+              name: 'Mirante Central',
+              description: 'Vista panoramica.',
+              imageUrl: 'https://example.com/mirante.jpg',
+              sortOrder: 0,
+              isPublished: true,
+            },
+            {
+              id: 2,
+              name: 'Atracao Oculta',
+              description: 'Nao deve aparecer.',
+              imageUrl: 'https://example.com/hidden.jpg',
+              sortOrder: 1,
+              isPublished: false,
+            },
+          ],
+        }),
+      }),
+    );
+
+    renderWithProviders(<CityDetailsPage />, {
+      route: '/cidades/alto-paraiso-de-goias',
+    });
+
+    expect(screen.getByRole('heading', { name: 'Atrações' })).toBeInTheDocument();
+    expect(screen.getByText('Mirante Central')).toBeInTheDocument();
+    expect(screen.queryByText('Atracao Oculta')).not.toBeInTheDocument();
+  });
+
+  it('renders the city gallery when images are available', () => {
+    mockUseCity.mockReturnValue(
+      createQueryState({
+        data: makeCity({
+          gallery: [
+            {
+              id: 10,
+              url: 'https://example.com/gallery-1.jpg',
+              altText: 'Cachoeira principal',
+              size: 1234,
+            },
+            {
+              id: 11,
+              url: 'https://example.com/gallery-2.jpg',
+              altText: 'Trilha do cerrado',
+              size: 2345,
+            },
+          ],
+        }),
+      }),
+    );
+
+    renderWithProviders(<CityDetailsPage />, {
+      route: '/cidades/alto-paraiso-de-goias',
+    });
+
+    expect(screen.getByRole('heading', { name: 'Galeria' })).toBeInTheDocument();
+    expect(screen.getByAltText('Cachoeira principal')).toBeInTheDocument();
+    expect(screen.getByAltText('Trilha do cerrado')).toBeInTheDocument();
+  });
+
+  it('renders fallbacks when the city has no attractions, gallery or cover image', () => {
+    mockUseCity.mockReturnValue(
+      createQueryState({
+        data: makeCity({
+          coverImage: null,
+          gallery: [],
+          attractions: [],
+        }),
+      }),
+    );
+
+    renderWithProviders(<CityDetailsPage />, {
+      route: '/cidades/alto-paraiso-de-goias',
+    });
+
+    expect(screen.getByAltText('Imagem ilustrativa de Alto Paraiso de Goias')).toBeInTheDocument();
+    expect(screen.getByText('A galeria desta cidade ainda não possui imagens complementares.')).toBeInTheDocument();
+    expect(screen.getByText('Ainda não há atrações publicadas para esta cidade.')).toBeInTheDocument();
   });
 });
-

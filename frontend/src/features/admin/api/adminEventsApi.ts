@@ -28,6 +28,11 @@ export const createAdminEvent = async (values: EventFormValues): Promise<Event> 
   return data;
 };
 
+export const getAdminEvent = async (eventId: number): Promise<Event> => {
+  const { data } = await apiClient.get(apiPaths.admin.event(eventId));
+  return data;
+};
+
 export const updateAdminEvent = async (eventId: number, values: EventFormValues): Promise<Event> => {
   const { data } = await apiClient.patch(apiPaths.admin.event(eventId), mapEventPayload(values));
   return data;
@@ -49,6 +54,12 @@ const mapEventPayload = (values: EventFormValues) => ({
   isFeatured: values.isFeatured,
   isPublished: values.isPublished,
   interestTagIds: values.interestTagIds.map(Number),
+  gallery: values.gallery.map((item) => ({
+    mediaAssetId: item.mediaAssetId,
+    altText: item.altText.trim() || null,
+    sortOrder: item.sortOrder,
+    isCover: item.isCover,
+  })),
 });
 
 const toIsoString = (value: string) => new Date(value).toISOString();
