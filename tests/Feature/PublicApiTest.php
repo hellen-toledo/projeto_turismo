@@ -3,11 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\City;
+use App\Models\CityAttraction;
 use App\Models\Event;
 use App\Models\InterestTag;
+use App\Models\MediaAsset;
 use App\Models\Region;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PublicApiTest extends TestCase
@@ -169,6 +172,8 @@ class PublicApiTest extends TestCase
 
     public function test_city_show_endpoint_returns_city_by_slug_with_relationships(): void
     {
+        Storage::fake('public');
+
         $region = Region::factory()->create([
             'name' => 'Chapada dos Veadeiros',
         ]);
@@ -178,12 +183,51 @@ class PublicApiTest extends TestCase
         ]);
         $tags = InterestTag::factory()->count(2)->create();
         $city->interestTags()->sync($tags->modelKeys());
+        CityAttraction::factory()->for($city)->create([
+            'name' => 'Mirante Publicado',
+            'sort_order' => 0,
+            'is_published' => true,
+        ]);
+        CityAttraction::factory()->unpublished()->for($city)->create([
+            'name' => 'Atracao Oculta',
+            'sort_order' => 1,
+        ]);
+        $coverMedia = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/04/public-cover.jpg',
+        ]);
+        $galleryMedia = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/04/public-gallery.jpg',
+        ]);
+        $city->galleryMediaAssets()->sync([
+            $coverMedia->id => [
+                'sort_order' => 0,
+                'alt_text' => 'Capa publica',
+                'is_cover' => true,
+            ],
+            $galleryMedia->id => [
+                'sort_order' => 1,
+                'alt_text' => 'Galeria publica',
+                'is_cover' => false,
+            ],
+        ]);
+        $city->update([
+            'cover_image' => null,
+        ]);
 
         $this->getJson('/api/v1/cities/alto-paraiso-de-goias')
             ->assertOk()
             ->assertJsonPath('slug', 'alto-paraiso-de-goias')
             ->assertJsonPath('region.name', 'Chapada dos Veadeiros')
-            ->assertJsonCount(2, 'interestTags');
+            ->assertJsonCount(2, 'interestTags')
+            ->assertJsonCount(1, 'attractions')
+            ->assertJsonPath('attractions.0.name', 'Mirante Publicado')
+            ->assertJsonMissing(['name' => 'Atracao Oculta'])
+            ->assertJsonCount(2, 'gallery')
+            ->assertJsonPath('gallery.0.isCover', true)
+            ->assertJsonPath('gallery.0.altText', 'Capa publica')
+            ->assertJsonPath('coverImage', '/storage/tourism/media/2026/04/public-cover.jpg');
     }
 
     public function test_city_show_endpoint_returns_not_found_for_unknown_slug(): void
@@ -299,6 +343,8 @@ class PublicApiTest extends TestCase
 
     public function test_event_show_endpoint_returns_event_by_slug_with_relationships(): void
     {
+        Storage::fake('public');
+
         $city = City::factory()->create([
             'name' => 'Minacu',
             'slug' => 'minacu',
@@ -309,12 +355,39 @@ class PublicApiTest extends TestCase
         ]);
         $tags = InterestTag::factory()->count(2)->create();
         $event->interestTags()->sync($tags->modelKeys());
+        $coverMedia = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/04/public-event-cover.jpg',
+        ]);
+        $galleryMedia = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/04/public-event-gallery.jpg',
+        ]);
+        $event->galleryMediaAssets()->sync([
+            $coverMedia->id => [
+                'sort_order' => 0,
+                'alt_text' => 'Capa publica do evento',
+                'is_cover' => true,
+            ],
+            $galleryMedia->id => [
+                'sort_order' => 1,
+                'alt_text' => 'Galeria publica do evento',
+                'is_cover' => false,
+            ],
+        ]);
+        $event->update([
+            'cover_image' => null,
+        ]);
 
         $this->getJson('/api/v1/events/festival-do-lago')
             ->assertOk()
             ->assertJsonPath('slug', 'festival-do-lago')
             ->assertJsonPath('city.slug', 'minacu')
-            ->assertJsonCount(2, 'interestTags');
+            ->assertJsonCount(2, 'interestTags')
+            ->assertJsonCount(2, 'gallery')
+            ->assertJsonPath('gallery.0.isCover', true)
+            ->assertJsonPath('gallery.0.altText', 'Capa publica do evento')
+            ->assertJsonPath('coverImage', '/storage/tourism/media/2026/04/public-event-cover.jpg');
     }
 
     public function test_event_show_endpoint_returns_not_found_for_unknown_slug(): void

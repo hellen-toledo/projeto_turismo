@@ -5,11 +5,13 @@ namespace App\Providers;
 use App\Domain\Cities\City;
 use App\Domain\Events\Event;
 use App\Domain\InterestTags\InterestTag;
+use App\Domain\MediaAssets\MediaAsset;
 use App\Domain\Regions\Region;
 use App\Models\User;
 use App\Policies\CityPolicy;
 use App\Policies\EventPolicy;
 use App\Policies\InterestTagPolicy;
+use App\Policies\MediaAssetPolicy;
 use App\Policies\RegionPolicy;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -40,6 +42,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Event::class, EventPolicy::class);
         Gate::policy(Region::class, RegionPolicy::class);
         Gate::policy(InterestTag::class, InterestTagPolicy::class);
+        Gate::policy(MediaAsset::class, MediaAssetPolicy::class);
         Gate::define('access-admin', fn (User $user) => $user->is_admin);
 
         RateLimiter::for('admin-login', function (Request $request): Limit {

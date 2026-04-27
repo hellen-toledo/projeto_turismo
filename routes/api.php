@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AdminAuthController;
 use App\Http\Controllers\Api\AdminCityController;
 use App\Http\Controllers\Api\AdminEventController;
 use App\Http\Controllers\Api\AdminInterestTagController;
+use App\Http\Controllers\Api\AdminMediaController;
 use App\Http\Controllers\Api\AdminRegionController;
 use App\Http\Controllers\Api\CityController;
 use App\Http\Controllers\Api\EventController;
@@ -28,9 +29,12 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
             Route::get('/auth/me', [AdminAuthController::class, 'me'])->name('auth.me');
             Route::post('/auth/logout', [AdminAuthController::class, 'logout'])->name('auth.logout');
 
-            Route::apiResource('cities', AdminCityController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::apiResource('cities', AdminCityController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
             Route::apiResource('events', AdminEventController::class)->only(['index', 'store', 'update', 'destroy']);
             Route::apiResource('regions', AdminRegionController::class)->only(['index', 'store', 'update', 'destroy']);
+            Route::apiResource('media', AdminMediaController::class)
+                ->parameters(['media' => 'media'])
+                ->only(['index', 'store', 'destroy']);
             Route::apiResource('interest-tags', AdminInterestTagController::class)
                 ->parameters(['interest-tags' => 'interestTag'])
                 ->only(['index', 'store', 'update', 'destroy']);

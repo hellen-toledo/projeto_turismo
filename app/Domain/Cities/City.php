@@ -2,8 +2,10 @@
 
 namespace App\Domain\Cities;
 
+use App\Domain\CityAttractions\CityAttraction;
 use App\Domain\Events\Event;
 use App\Domain\InterestTags\InterestTag;
+use App\Domain\MediaAssets\MediaAsset;
 use App\Domain\Regions\Region;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -43,5 +45,19 @@ class City extends Model
     {
         return $this->belongsToMany(InterestTag::class)
             ->withTimestamps();
+    }
+
+    public function attractions(): HasMany
+    {
+        return $this->hasMany(CityAttraction::class)
+            ->orderBy('sort_order');
+    }
+
+    public function galleryMediaAssets(): BelongsToMany
+    {
+        return $this->belongsToMany(MediaAsset::class, 'city_media_asset')
+            ->withPivot(['sort_order', 'alt_text', 'is_cover'])
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
     }
 }

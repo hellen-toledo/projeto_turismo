@@ -4,6 +4,7 @@ namespace App\Domain\Events;
 
 use App\Domain\Cities\City;
 use App\Domain\InterestTags\InterestTag;
+use App\Domain\MediaAssets\MediaAsset;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -42,5 +43,13 @@ class Event extends Model
     {
         return $this->belongsToMany(InterestTag::class)
             ->withTimestamps();
+    }
+
+    public function galleryMediaAssets(): BelongsToMany
+    {
+        return $this->belongsToMany(MediaAsset::class, 'event_media_asset')
+            ->withPivot(['sort_order', 'alt_text', 'is_cover'])
+            ->withTimestamps()
+            ->orderByPivot('sort_order');
     }
 }

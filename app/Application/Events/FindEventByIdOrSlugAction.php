@@ -10,7 +10,6 @@ class FindEventByIdOrSlugAction
     public function __invoke(string $idOrSlug): Event
     {
         $event = Event::query()
-            ->with(['city.region', 'interestTags'])
             ->where('slug', $idOrSlug)
             ->when(is_numeric($idOrSlug), fn ($query) => $query->orWhere('id', (int) $idOrSlug))
             ->first();

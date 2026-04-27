@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Models\City;
 use App\Models\Event;
 use App\Models\InterestTag;
+use App\Models\MediaAsset;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -191,6 +193,7 @@ class AdminApiTest extends TestCase
     public function test_admin_can_manage_regions_tags_and_cities(): void
     {
         $this->authenticateAsAdmin();
+        Storage::fake('public');
 
         $regionResponse = $this->postJson('/api/v1/admin/regions', [
             'name' => 'Chapada dos Veadeiros',
@@ -200,27 +203,82 @@ class AdminApiTest extends TestCase
             'name' => 'Ecoturismo',
         ])->assertCreated();
 
+        $coverMedia = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/04/admin-cover.jpg',
+            'alt_text' => 'Capa administrativa',
+        ]);
+        $galleryMedia = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/04/admin-gallery.jpg',
+            'alt_text' => 'Galeria administrativa',
+        ]);
+
         $cityResponse = $this->postJson('/api/v1/admin/cities', $this->validCityPayload(
             regionId: $regionResponse->json('id'),
             interestTagIds: [$tagResponse->json('id')],
+            attractions: [
+                [
+                    'name' => 'Mirante Central',
+                    'description' => 'Vista ampla da cidade.',
+                    'imageUrl' => 'https://example.com/mirante.jpg',
+                    'sortOrder' => 0,
+                    'isPublished' => true,
+                ],
+            ],
+            gallery: [
+                [
+                    'mediaAssetId' => $coverMedia->id,
+                    'sortOrder' => 0,
+                    'altText' => 'Foto de capa da cidade',
+                    'isCover' => true,
+                ],
+                [
+                    'mediaAssetId' => $galleryMedia->id,
+                    'sortOrder' => 1,
+                    'altText' => 'Foto complementar',
+                    'isCover' => false,
+                ],
+            ],
         ));
 
         $cityResponse
             ->assertCreated()
             ->assertJsonPath('name', 'Alto Paraiso de Goias')
-            ->assertJsonPath('region.name', 'Chapada dos Veadeiros');
+            ->assertJsonPath('region.name', 'Chapada dos Veadeiros')
+            ->assertJsonPath('attractions.0.name', 'Mirante Central')
+            ->assertJsonPath('attractions.0.isPublished', true)
+            ->assertJsonPath('gallery.0.id', $coverMedia->id)
+            ->assertJsonPath('gallery.0.isCover', true);
 
         $cityId = $cityResponse->json('id');
 
         $this->patchJson("/api/v1/admin/cities/{$cityId}", [
             'summary' => 'Resumo atualizado.',
+            'attractions' => [
+                [
+                    'id' => $cityResponse->json('attractions.0.id'),
+                    'name' => 'Mirante Central Renovado',
+                    'description' => 'Vista atualizada da cidade.',
+                    'imageUrl' => 'https://example.com/mirante-renovado.jpg',
+                    'sortOrder' => 0,
+                    'isPublished' => true,
+                ],
+            ],
         ])
             ->assertOk()
-            ->assertJsonPath('summary', 'Resumo atualizado.');
+            ->assertJsonPath('summary', 'Resumo atualizado.')
+            ->assertJsonPath('attractions.0.name', 'Mirante Central Renovado');
 
         $this->getJson('/api/v1/admin/cities')
             ->assertOk()
             ->assertJsonCount(1, 'data');
+
+        $this->getJson("/api/v1/admin/cities/{$cityId}")
+            ->assertOk()
+            ->assertJsonPath('gallery.0.id', $coverMedia->id)
+            ->assertJsonPath('gallery.1.id', $galleryMedia->id)
+            ->assertJsonPath('attractions.0.name', 'Mirante Central Renovado');
     }
 
     public function test_admin_city_creation_validates_required_fields(): void
@@ -235,6 +293,7 @@ class AdminApiTest extends TestCase
     public function test_admin_can_manage_events(): void
     {
         $this->authenticateAsAdmin();
+        Storage::fake('public');
 
         $city = City::factory()->create([
             'name' => 'Minacu',
@@ -244,19 +303,59 @@ class AdminApiTest extends TestCase
             'name' => 'Turismo Nautico',
             'slug' => 'turismo-nautico',
         ]);
+        $coverMedia = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/04/event-cover.jpg',
+        ]);
+        $galleryMedia = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/04/event-gallery.jpg',
+        ]);
 
         $response = $this->postJson('/api/v1/admin/events', $this->validEventPayload(
             cityId: $city->id,
             interestTagIds: [$tag->id],
+            gallery: [
+                [
+                    'mediaAssetId' => $coverMedia->id,
+                    'sortOrder' => 0,
+                    'altText' => 'Capa do evento',
+                    'isCover' => true,
+                ],
+                [
+                    'mediaAssetId' => $galleryMedia->id,
+                    'sortOrder' => 1,
+                    'altText' => 'Bastidores do evento',
+                    'isCover' => false,
+                ],
+            ],
         ));
 
         $response
             ->assertCreated()
             ->assertJsonPath('title', 'Festival do Lago')
             ->assertJsonPath('city.slug', 'minacu')
-            ->assertJsonPath('isFeatured', true);
+            ->assertJsonPath('isFeatured', true)
+            ->assertJsonPath('gallery.0.id', $coverMedia->id)
+            ->assertJsonPath('gallery.0.isCover', true)
+            ->assertJsonPath('coverImage', '/storage/tourism/media/2026/04/event-cover.jpg');
 
         $eventId = $response->json('id');
+
+        $this->patchJson("/api/v1/admin/events/{$eventId}", [
+            'gallery' => [
+                [
+                    'mediaAssetId' => $galleryMedia->id,
+                    'sortOrder' => 0,
+                    'altText' => 'Nova capa do evento',
+                    'isCover' => true,
+                ],
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('gallery.0.id', $galleryMedia->id)
+            ->assertJsonPath('gallery.0.isCover', true)
+            ->assertJsonPath('coverImage', '/storage/tourism/media/2026/04/event-gallery.jpg');
 
         $this->deleteJson("/api/v1/admin/events/{$eventId}")
             ->assertNoContent();
@@ -393,6 +492,34 @@ class AdminApiTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_still_create_event_with_legacy_cover_image_url(): void
+    {
+        $this->authenticateAsAdmin();
+
+        $city = City::factory()->create([
+            'slug' => 'minacu',
+        ]);
+
+        $response = $this->postJson('/api/v1/admin/events', [
+            'title' => 'Evento com URL Legada',
+            'description' => 'Evento usando payload antigo.',
+            'startsAt' => '2026-09-10 09:00:00',
+            'endsAt' => '2026-09-10 18:00:00',
+            'cityId' => $city->id,
+            'coverImage' => 'https://example.com/legacy-event.jpg',
+            'isPublished' => true,
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('coverImage', 'https://example.com/legacy-event.jpg');
+
+        $this->assertDatabaseHas('events', [
+            'title' => 'Evento com URL Legada',
+            'cover_image' => 'https://example.com/legacy-event.jpg',
+        ]);
+    }
+
     private function authenticateAsAdmin(): User
     {
         $admin = User::factory()->admin()->create();
@@ -401,8 +528,12 @@ class AdminApiTest extends TestCase
         return $admin;
     }
 
-    private function validCityPayload(int $regionId, array $interestTagIds = []): array
-    {
+    private function validCityPayload(
+        int $regionId,
+        array $interestTagIds = [],
+        array $attractions = [],
+        array $gallery = [],
+    ): array {
         return [
             'name' => 'Alto Paraiso de Goias',
             'summary' => 'Base de apoio da Chapada.',
@@ -411,10 +542,12 @@ class AdminApiTest extends TestCase
             'regionId' => $regionId,
             'isPublished' => true,
             'interestTagIds' => $interestTagIds,
+            'attractions' => $attractions,
+            'gallery' => $gallery,
         ];
     }
 
-    private function validEventPayload(int $cityId, array $interestTagIds = []): array
+    private function validEventPayload(int $cityId, array $interestTagIds = [], array $gallery = []): array
     {
         return [
             'title' => 'Festival do Lago',
@@ -425,6 +558,7 @@ class AdminApiTest extends TestCase
             'isFeatured' => true,
             'isPublished' => true,
             'interestTagIds' => $interestTagIds,
+            'gallery' => $gallery,
         ];
     }
 }

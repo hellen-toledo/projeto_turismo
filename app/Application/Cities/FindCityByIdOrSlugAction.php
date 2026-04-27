@@ -10,7 +10,6 @@ class FindCityByIdOrSlugAction
     public function __invoke(string $idOrSlug): City
     {
         $city = City::query()
-            ->with(['region', 'interestTags'])
             ->where('slug', $idOrSlug)
             ->when(is_numeric($idOrSlug), fn ($query) => $query->orWhere('id', (int) $idOrSlug))
             ->first();
