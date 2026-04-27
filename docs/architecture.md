@@ -21,6 +21,44 @@ O backend é a fonte de verdade para domínio, persistência, autenticação, au
 
 As rotas legadas fora de `/api/v1` não fazem parte do fluxo ativo atual.
 
+## Rotas HTTP ativas
+
+Públicas:
+
+- `GET /api/v1/regions`
+- `GET /api/v1/cities`
+- `GET /api/v1/cities/{idOrSlug}`
+- `GET /api/v1/events`
+- `GET /api/v1/events/{idOrSlug}`
+- `GET /api/v1/interest-tags`
+
+Administrativas:
+
+- `POST /api/v1/admin/auth/login`
+- `GET /api/v1/admin/auth/me`
+- `POST /api/v1/admin/auth/logout`
+- `GET /api/v1/admin/cities`
+- `POST /api/v1/admin/cities`
+- `GET /api/v1/admin/cities/{city}`
+- `PUT|PATCH /api/v1/admin/cities/{city}`
+- `DELETE /api/v1/admin/cities/{city}`
+- `GET /api/v1/admin/events`
+- `POST /api/v1/admin/events`
+- `GET /api/v1/admin/events/{event}`
+- `PUT|PATCH /api/v1/admin/events/{event}`
+- `DELETE /api/v1/admin/events/{event}`
+- `GET /api/v1/admin/regions`
+- `POST /api/v1/admin/regions`
+- `PUT|PATCH /api/v1/admin/regions/{region}`
+- `DELETE /api/v1/admin/regions/{region}`
+- `GET /api/v1/admin/interest-tags`
+- `POST /api/v1/admin/interest-tags`
+- `PUT|PATCH /api/v1/admin/interest-tags/{interestTag}`
+- `DELETE /api/v1/admin/interest-tags/{interestTag}`
+- `GET /api/v1/admin/media`
+- `POST /api/v1/admin/media`
+- `DELETE /api/v1/admin/media/{media}`
+
 ## Backend
 
 ### Camadas

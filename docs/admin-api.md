@@ -81,17 +81,19 @@ Conflitos de integridade atuais:
 ### Cities
 
 - `GET /api/v1/admin/cities`
-- `GET /api/v1/admin/cities/{city}`
 - `POST /api/v1/admin/cities`
+- `GET /api/v1/admin/cities/{city}`
 - `PATCH /api/v1/admin/cities/{city}`
+- `PUT /api/v1/admin/cities/{city}`
 - `DELETE /api/v1/admin/cities/{city}`
 
 ### Events
 
 - `GET /api/v1/admin/events`
-- `GET /api/v1/admin/events/{event}`
 - `POST /api/v1/admin/events`
+- `GET /api/v1/admin/events/{event}`
 - `PATCH /api/v1/admin/events/{event}`
+- `PUT /api/v1/admin/events/{event}`
 - `DELETE /api/v1/admin/events/{event}`
 
 ### Regions
@@ -99,6 +101,7 @@ Conflitos de integridade atuais:
 - `GET /api/v1/admin/regions`
 - `POST /api/v1/admin/regions`
 - `PATCH /api/v1/admin/regions/{region}`
+- `PUT /api/v1/admin/regions/{region}`
 - `DELETE /api/v1/admin/regions/{region}`
 
 ### Interest Tags
@@ -106,6 +109,7 @@ Conflitos de integridade atuais:
 - `GET /api/v1/admin/interest-tags`
 - `POST /api/v1/admin/interest-tags`
 - `PATCH /api/v1/admin/interest-tags/{interestTag}`
+- `PUT /api/v1/admin/interest-tags/{interestTag}`
 - `DELETE /api/v1/admin/interest-tags/{interestTag}`
 
 ### Media
@@ -260,7 +264,7 @@ Notas:
 
 - o frontend público ainda não possui página própria de detalhe do evento
 - tags de interesse não retornam contadores de uso na API atual
-- as rotas legadas fora de `/api/v1` não fazem parte do fluxo ativo e não devem ser usadas
+- os aliases legados comentados em `routes/api.php` não fazem parte da API ativa e não devem ser documentados como disponíveis
 
 ## Dados de seed
 

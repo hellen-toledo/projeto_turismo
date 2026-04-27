@@ -25,7 +25,54 @@ A única base oficial ativa da API é:
 
 - `/api/v1`
 
-Rotas legadas fora de `/api/v1` existem apenas como bloco comentado em [routes/api.php](routes/api.php) e não fazem parte do fluxo ativo do projeto.
+Os aliases legados fora de `/api/v1` permanecem apenas como bloco comentado em [routes/api.php](routes/api.php) para referência histórica e não respondem como rotas ativas.
+
+### Rotas públicas ativas
+
+- `GET /api/v1/regions`
+- `GET /api/v1/cities`
+- `GET /api/v1/cities/{idOrSlug}`
+- `GET /api/v1/events`
+- `GET /api/v1/events/{idOrSlug}`
+- `GET /api/v1/interest-tags`
+
+### Rotas administrativas ativas
+
+Auth:
+- `POST /api/v1/admin/auth/login`
+- `GET /api/v1/admin/auth/me`
+- `POST /api/v1/admin/auth/logout`
+
+Cities:
+- `GET /api/v1/admin/cities`
+- `POST /api/v1/admin/cities`
+- `GET /api/v1/admin/cities/{city}`
+- `PUT|PATCH /api/v1/admin/cities/{city}`
+- `DELETE /api/v1/admin/cities/{city}`
+
+Events:
+- `GET /api/v1/admin/events`
+- `POST /api/v1/admin/events`
+- `GET /api/v1/admin/events/{event}`
+- `PUT|PATCH /api/v1/admin/events/{event}`
+- `DELETE /api/v1/admin/events/{event}`
+
+Regions:
+- `GET /api/v1/admin/regions`
+- `POST /api/v1/admin/regions`
+- `PUT|PATCH /api/v1/admin/regions/{region}`
+- `DELETE /api/v1/admin/regions/{region}`
+
+Interest Tags:
+- `GET /api/v1/admin/interest-tags`
+- `POST /api/v1/admin/interest-tags`
+- `PUT|PATCH /api/v1/admin/interest-tags/{interestTag}`
+- `DELETE /api/v1/admin/interest-tags/{interestTag}`
+
+Media:
+- `GET /api/v1/admin/media`
+- `POST /api/v1/admin/media`
+- `DELETE /api/v1/admin/media/{media}`
 
 ## Estrutura
 
