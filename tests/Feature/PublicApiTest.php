@@ -401,11 +401,24 @@ class PublicApiTest extends TestCase
 
     public function test_public_api_rejects_write_methods(): void
     {
-        $this->postJson('/api/v1/cities', [])
-            ->assertStatus(405)
-            ->assertExactJson([
-                'message' => 'Method not allowed.',
-            ]);
+        $writeRequests = [
+            ['postJson', '/api/v1/cities'],
+            ['putJson', '/api/v1/cities/1'],
+            ['patchJson', '/api/v1/cities/1'],
+            ['deleteJson', '/api/v1/cities/1'],
+            ['postJson', '/api/v1/events'],
+            ['putJson', '/api/v1/events/1'],
+            ['patchJson', '/api/v1/events/1'],
+            ['deleteJson', '/api/v1/events/1'],
+        ];
+
+        foreach ($writeRequests as [$method, $uri]) {
+            $this->{$method}($uri, [])
+                ->assertStatus(405)
+                ->assertExactJson([
+                    'message' => 'Method not allowed.',
+                ]);
+        }
     }
 
     public function test_events_endpoint_orders_by_date(): void
