@@ -10,6 +10,8 @@ import { CitiesPage } from '../pages/CitiesPage';
 import { EventsPage } from '../pages/EventsPage';
 import { HomePage } from '../pages/HomePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { VisitorGuidePage } from '../pages/VisitorGuidePage';
+import { ContactPage } from '../pages/ContactPage';
 import { AppShell } from '../shared/components/AppShell';
 
 export const router = createBrowserRouter([
@@ -32,6 +34,14 @@ export const router = createBrowserRouter([
       {
         path: 'eventos',
         element: <EventsPage />,
+      },
+      {
+        path: 'guia',
+        element: <VisitorGuidePage />,
+      },
+      {
+        path: 'contato',
+        element: <ContactPage />,
       },
       {
         path: '*',

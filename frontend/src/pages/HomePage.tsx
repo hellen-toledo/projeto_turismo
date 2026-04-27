@@ -7,13 +7,24 @@ import { EmptyState } from '../shared/components/EmptyState';
 import { ErrorState } from '../shared/components/ErrorState';
 import { LoadingState } from '../shared/components/LoadingState';
 import { SectionHeader } from '../shared/components/SectionHeader';
+import type { City } from '../shared/types/api';
 
 export const HomePage = () => {
-  const { data: cities, isLoading: loadingCities, isError: citiesError } = useCities();
-  const { data: events, isLoading: loadingEvents, isError: eventsError } = useEvents();
+  const { data: citiesResponse, isLoading: loadingCities, isError: citiesError } = useCities({ perPage: 12 });
+  const { data: eventsResponse, isLoading: loadingEvents, isError: eventsError } = useEvents({ perPage: 3, future: true });
 
-  const featuredCities = cities?.slice(0, 4) ?? [];
-  const upcomingEvents = events?.slice(0, 3) ?? [];
+  const cities = citiesResponse?.data ?? [];
+  const upcomingEvents = eventsResponse?.data ?? [];
+
+  // Group cities by region
+  const citiesByRegion = cities.reduce((acc, city) => {
+    const regionName = city.region?.name ?? 'Outras Regiões';
+    if (!acc[regionName]) {
+      acc[regionName] = [];
+    }
+    acc[regionName].push(city);
+    return acc;
+  }, {} as Record<string, City[]>);
 
   return (
     <>
@@ -21,8 +32,8 @@ export const HomePage = () => {
 
       <section className="mb-20">
         <SectionHeader
-          title="Cidades Incríveis"
-          description="Explore destinos divididos por macrorregiões do Norte Goiano."
+          title="Destinos por Região"
+          description="Explore as cidades divididas pelas principais rotas turísticas."
           actionLabel="Ver todas as cidades"
           actionTo="/cidades"
         />
@@ -36,10 +47,17 @@ export const HomePage = () => {
             actionLabel="Ver eventos"
             actionTo="/eventos"
           />
-        ) : featuredCities.length ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {featuredCities.map((city) => (
-              <CityCard key={city.id} city={city} />
+        ) : cities.length ? (
+          <div className="space-y-12">
+            {Object.entries(citiesByRegion).map(([region, regionCities]) => (
+              <div key={region}>
+                <h3 className="text-2xl font-bold text-white mb-6 border-b border-gray-800 pb-2">{region}</h3>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                  {regionCities.map((city) => (
+                    <CityCard key={city.id} city={city} />
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         ) : (
@@ -51,7 +69,7 @@ export const HomePage = () => {
       </section>
 
       <section className="mb-20">
-        <div className="rounded-3xl bg-green-50 p-8 md:p-12">
+        <div className="rounded-3xl border border-gray-800 bg-gray-900/50 p-8 md:p-12 shadow-sm">
           <SectionHeader
             title="Próximos Eventos"
             actionLabel="Ver agenda completa"
@@ -80,13 +98,6 @@ export const HomePage = () => {
             />
           )}
         </div>
-      </section>
-
-      <section className="mb-12 rounded-3xl border border-gray-100 bg-white py-16 text-center shadow-sm">
-        <h2 className="mb-4 text-3xl font-bold text-gray-800">Guia do Visitante</h2>
-        <p className="text-lg font-medium italic text-green-700">
-          Em breve: dicas de hospedagem, gastronomia local e muito mais.
-        </p>
       </section>
     </>
   );

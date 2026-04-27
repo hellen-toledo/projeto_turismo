@@ -1,9 +1,11 @@
 import { PencilLine, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { Event } from '../../../shared/types/api';
 import { EmptyState } from '../../../shared/components/EmptyState';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { LoadingState } from '../../../shared/components/LoadingState';
+import { PaginationControls } from '../../../shared/components/PaginationControls';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
 import { EventForm } from '../forms/EventForm';
@@ -13,12 +15,22 @@ import { useAdminInterestTags } from '../hooks/useAdminInterestTags';
 import { mapCitiesToOptions, mapTagsToOptions, type AdminFeedback } from '../types/admin';
 
 export const AdminEventsPage = () => {
-  const { data: events, isLoading: loadingEvents, isError: eventsError } = useAdminEvents();
-  const { data: cities, isLoading: loadingCities, isError: citiesError } = useAdminCities();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filters = {
+    page: Number(searchParams.get('page') || '1'),
+    perPage: 12,
+    search: searchParams.get('q') || undefined,
+    published: searchParams.get('published') === '1' ? true : searchParams.get('published') === '0' ? false : undefined,
+    featured: searchParams.get('featured') === '1' ? true : undefined,
+  };
+  const { data: eventsResponse, isLoading: loadingEvents, isError: eventsError } = useAdminEvents(filters);
+  const { data: citiesResponse, isLoading: loadingCities, isError: citiesError } = useAdminCities({ perPage: 50 });
   const { data: tags, isLoading: loadingTags, isError: tagsError } = useAdminInterestTags();
   const { deleteEvent, deleting } = useAdminEventMutations();
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
+  const events = eventsResponse?.data ?? [];
+  const cities = citiesResponse?.data ?? [];
 
   if (loadingEvents || loadingCities || loadingTags) {
     return <LoadingState label="Carregando base administrativa de eventos..." />;
@@ -94,8 +106,64 @@ export const AdminEventsPage = () => {
             <p className="text-sm font-semibold uppercase tracking-[0.26em] text-emerald-700">Lista</p>
             <h2 className="mt-2 text-3xl font-black text-slate-900">Eventos cadastrados</h2>
           </div>
-          <p className="text-sm text-slate-500">{events?.length ?? 0} itens</p>
+          <p className="text-sm text-slate-500">{eventsResponse?.meta.total ?? 0} itens</p>
         </div>
+
+        <form
+          className="mt-6 grid gap-3 md:grid-cols-[2fr_1fr_1fr_auto]"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const formData = new FormData(event.currentTarget);
+            const next = new URLSearchParams(searchParams);
+            const q = String(formData.get('q') || '').trim();
+            const published = String(formData.get('published') || '');
+
+            if (q) {
+              next.set('q', q);
+            } else {
+              next.delete('q');
+            }
+
+            if (published) {
+              next.set('published', published);
+            } else {
+              next.delete('published');
+            }
+
+            if (formData.get('featured') === 'on') {
+              next.set('featured', '1');
+            } else {
+              next.delete('featured');
+            }
+
+            next.set('page', '1');
+            setSearchParams(next);
+          }}
+        >
+          <input
+            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
+            defaultValue={filters.search ?? ''}
+            name="q"
+            placeholder="Buscar evento ou descrição"
+            type="text"
+          />
+          <select
+            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
+            defaultValue={searchParams.get('published') ?? ''}
+            name="published"
+          >
+            <option value="">Todos os status</option>
+            <option value="1">Publicados</option>
+            <option value="0">Rascunhos</option>
+          </select>
+          <label className="flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700">
+            <input defaultChecked={filters.featured === true} name="featured" type="checkbox" />
+            Destaques
+          </label>
+          <button className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white" type="submit">
+            Aplicar
+          </button>
+        </form>
 
         <div className="mt-6 space-y-4">
           {events?.length ? (
@@ -146,6 +214,16 @@ export const AdminEventsPage = () => {
             />
           )}
         </div>
+
+        <PaginationControls
+          currentPage={eventsResponse?.meta.currentPage ?? 1}
+          lastPage={eventsResponse?.meta.lastPage ?? 1}
+          onPageChange={(page) => {
+            const next = new URLSearchParams(searchParams);
+            next.set('page', String(page));
+            setSearchParams(next);
+          }}
+        />
       </section>
     </div>
   );

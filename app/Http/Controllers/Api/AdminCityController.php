@@ -21,7 +21,7 @@ class AdminCityController extends Controller
     {
         $this->authorize('viewAny', City::class);
 
-        return CityResource::collection($listCities($request->validated()));
+        return CityResource::collection($listCities($request->validated(), true));
     }
 
     public function store(StoreCityRequest $request, CreateCityAction $createCity): Response

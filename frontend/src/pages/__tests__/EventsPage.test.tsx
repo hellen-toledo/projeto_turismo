@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeEvent } from '../../test/fixtures';
+import { makeEvent, makePaginatedResponse } from '../../test/fixtures';
 import { renderWithProviders } from '../../test/utils';
 import { EventsPage } from '../EventsPage';
 
@@ -43,7 +43,7 @@ describe('EventsPage', () => {
   });
 
   it('renders an empty state when there are no events', () => {
-    mockUseEvents.mockReturnValue(createQueryState({ data: [] }));
+    mockUseEvents.mockReturnValue(createQueryState({ data: makePaginatedResponse([]) }));
 
     renderWithProviders(<EventsPage />);
 
@@ -53,10 +53,10 @@ describe('EventsPage', () => {
   it('renders the event list when data is available', () => {
     mockUseEvents.mockReturnValue(
       createQueryState({
-        data: [
+        data: makePaginatedResponse([
           makeEvent({ id: 1, title: 'Festival do Lago' }),
           makeEvent({ id: 2, title: 'Feira do Cerrado', slug: 'feira-do-cerrado' }),
-        ],
+        ]),
       }),
     );
 
@@ -68,4 +68,3 @@ describe('EventsPage', () => {
     expect(screen.getAllByRole('link', { name: /Abrir detalhes externos do evento/i })).toHaveLength(2);
   });
 });
-

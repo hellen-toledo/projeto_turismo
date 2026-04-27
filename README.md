@@ -1,213 +1,143 @@
-# Projeto Turismo
+# Projeto Turismo Norte-Goiano
 
-Aplicação organizada como `backend Laravel API + frontend React/Vite separado`.
+Bem-vindo(a) ao repositório do **Turismo Norte-Goiano**, um portal focado em dar visibilidade aos destinos e eventos turísticos da região norte de Goiás.
 
-## Estado atual
+A aplicação é dividida em um **backend robusto (Laravel)** e um **frontend moderno e separado (React/Vite)**. O sistema atende tanto a exibição pública do catálogo de turismo quanto a gestão administrativa de seus conteúdos.
 
-- backend Laravel com API pública em `/api/*`
-- autenticação administrativa com Sanctum
-- área administrativa inicial no frontend em `/admin`
-- testes automatizados no backend e no frontend
-- execução local por PHP nativo ou por Laravel Sail
+## Visão Geral e Requisitos Funcionais
 
-## Estrutura
+O sistema é responsável por:
+- Exibir cidades com fotos de capa, descrições ricas, identificação de região e tags temáticas de interesse (como Ecoturismo, Pesca Esportiva, etc).
+- Listar eventos agendados, mostrando datas, relacionamento com cidades específicas e links para informações externas.
+- Centralizar o filtro e a pesquisa em um catálogo amigável e responsivo.
+- Prover um painel administrativo protegido por autenticação para gerenciamento de Cidades e Eventos.
 
-- `app`, `bootstrap`, `config`, `database`, `routes`, `tests`: backend Laravel
-- `frontend`: SPA React/Vite
-- `docs/architecture.md`: visão arquitetural
-- `docs/admin-api.md`: endpoints administrativos
+## Arquitetura de Pastas
 
-## Requisitos
-
-- PHP 8.2+
-- Composer
-- Node.js 20+
-- npm
-
-Para ambiente containerizado:
-
-- Docker
-- Docker Compose
-
-## Setup rápido
-
-### Backend sem Docker
-
-```bash
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate
-php artisan serve
+```text
+/
+├── app/               # Lógica do Backend Laravel (Controllers, Models em Domain, Policies)
+├── bootstrap/         # Inicialização do framework Laravel
+├── config/            # Configurações do Laravel
+├── database/          # Migrations, Factories e Seeders
+├── docs/              # Documentação adicional (arquitetura, diagramas, endpoints admin)
+├── frontend/          # SPA React/TypeScript gerada com Vite
+│   └── src/           # Código-fonte da interface web, separado por features
+├── routes/            # Definição das rotas de API e Web do Laravel
+└── tests/             # Testes do Backend (PHPUnit)
 ```
 
-API padrão: `http://localhost:8000`
+## Stack Real e Ferramentas
 
-### Frontend
+- **Backend:** Laravel 12, PHP 8.2+, SQLite (padrão local), Sanctum (Autenticação SPA)
+- **Frontend:** React 19, TypeScript 5.9, Vite 7, Tailwind CSS 3, React Router 7, Axios, React Query 5
+- **Qualidade e Testes:** PHPUnit para backend, Vitest + Testing Library para frontend, Laravel Pint e ESLint para formatação/linting.
 
+## Endpoints e Rotas da API
+
+Decidimos padronizar a interface da aplicação sobre a URL **`/api/v1`**, estabelecendo-a como a API oficial para consumo e possível integração futura por terceiros.
+
+**Públicos (`/api/v1`):**
+- `GET /api/v1/regions` (Retorna regiões e contagem de cidades)
+- `GET /api/v1/cities` (Com suporte a paginação e filtros `search`, `region`, `tag`, `published`)
+- `GET /api/v1/cities/{idOrSlug}` (Detalhes de cidade)
+- `GET /api/v1/events` (Com suporte a filtros `search`, `city`, `tag`, `featured`, `future`, `published`)
+- `GET /api/v1/events/{idOrSlug}` (Detalhes de evento)
+- `GET /api/v1/interest-tags` (Retorna tags de interesse)
+
+**Administrativos (`/api/v1/admin`):**
+- `POST /api/v1/admin/auth/login` (Requer rate limit, devolve token Bearer)
+- `POST /api/v1/admin/auth/logout`
+- `GET /api/v1/admin/auth/me`
+- CRUD protegido por token: `cities`, `events`, `regions`, `interest-tags`.
+
+**⚠️ Endpoints Deprecated (Legados):**
+As antigas rotas sem versionamento e com nomes traduzidos (`/api/cities`, `/api/events`, `/api/cidades`, `/api/eventos`) ainda estão respondendo por uma camada de compatibilidade temporária, mas não devem ser usadas no desenvolvimento de novas features e serão desativadas em atualizações futuras.
+
+## Fluxo Administrativo
+
+O painel está em `http://localhost:5173/admin`.
+Um usuário não logado é redirecionado a `/admin/login`. Após fornecer as credenciais válidas e possuir privilégios de `isAdmin = true`, ele recebe um token do Sanctum armazenado de forma segura, permitindo o gerenciamento de Cidades e Eventos.
+
+---
+
+## Como Instalar e Rodar o Projeto
+
+Siga os passos abaixo, seja executando localmente com o PHP embutido, ou de forma containerizada com Laravel Sail.
+
+### 1. Preparação (Variáveis de Ambiente)
+Duplique os arquivos `.env.example`:
+```bash
+cp .env.example .env
+cp frontend/.env.example frontend/.env
+```
+
+**Variáveis relevantes no backend (`.env`):**
+- `DB_CONNECTION=sqlite` (O banco padrão está em `database/database.sqlite`).
+- `APP_URL=http://localhost:8000`
+
+**Variáveis relevantes no frontend (`frontend/.env`):**
+- `VITE_API_URL=http://localhost:8000/api/v1`
+
+### 2. Rodando via Composer e NPM localmente (Sem Docker)
+
+Requer PHP 8.2+ (com extensões mbstring, sqlite3, xml, etc), Composer e Node.js 20+.
+
+**Backend:**
+```bash
+composer install
+php artisan key:generate
+php artisan migrate --seed
+php artisan serve
+```
+> API respondendo em http://localhost:8000
+
+**Frontend:**
 ```bash
 cd frontend
-cp .env.example .env
 npm install
 npm run dev
 ```
+> Interface respondendo em http://localhost:5173
 
-Frontend padrão: `http://localhost:5173`
+### 3. Rodando com Docker (Laravel Sail)
 
-### Banco local sem Docker
-
-O `.env.example` vem configurado para `sqlite`, usando `database/database.sqlite`, que já existe no repositório.
-
-Se preferir MySQL, ajuste no `.env`:
-
-```env
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=projeto_turismo
-DB_USERNAME=root
-DB_PASSWORD=
-```
-
-## Setup com Sail
+Para quem prefere trabalhar com contêineres e não quer instalar as dependências de PHP locais na máquina:
 
 ```bash
-composer install
-cp .env.example .env
+composer install # Necessita pelo menos de um ambiente para rodar essa instalação inicial, ou usar contêiner isolado do composer
 ./vendor/bin/sail up -d
 ./vendor/bin/sail artisan key:generate
-./vendor/bin/sail artisan migrate
+./vendor/bin/sail artisan migrate --seed
 ./vendor/bin/sail npm --prefix frontend install
 ./vendor/bin/sail npm --prefix frontend run dev -- --host
 ```
 
-Serviços relevantes do `compose.yaml`:
+### 4. Atalhos Úteis
 
-- `laravel.test`: app PHP/Laravel
-- `mysql`: banco principal e banco `testing`
-- `redis`
-- `mailpit`
+Para facilitar, incluímos no arquivo `package.json` raiz atalhos que operam os dois projetos simultaneamente:
 
-## Como subir cada parte
+- **Instalar tudo:** `composer run setup` (Irá copiar envs, gerar chaves, rodar migrate e npm install no frontend).
+- **Rodar tudo junto:** `npm run dev` ou `composer run dev` (Inicia o `php artisan serve` e o `vite` no mesmo terminal usando o pacote concurrently).
 
-### Backend
+## Comandos de Qualidade de Código e Testes
 
-Sem Docker:
+Ambos os repositórios possuem scripts diretos para validação, essenciais para rodar antes de efetuar commits e abrir Pull Requests (PRs).
 
-```bash
-php artisan serve
-```
+No terminal, na **raiz do repositório**, você pode executar:
 
-Com Sail:
+- `npm run test` (Executa os testes PHPUnit do backend e os do Vitest no frontend sequencialmente).
+- `npm run lint` (Executa o Laravel Pint no backend e o ESLint no frontend).
+- `npm run build` (Inicia o empacotamento para produção do frontend gerando as build-assets através do `vite build`).
 
-```bash
-./vendor/bin/sail up -d
-```
+Se quiser rodar separadamente, basta acessar o respectivo diretório e rodar o script local correspondente (ex: `php artisan test` no backend, `npm run test` dentro da pasta frontend).
 
-### Frontend
+### Validação Contínua (CI)
 
-```bash
-cd frontend
-npm run dev
-```
+O repositório já conta com um fluxo automatizado de integração contínua (via **GitHub Actions**) descrito no arquivo `.github/workflows/ci.yml`.
 
-### Banco
+Toda vez que você abrir um Pull Request (PR) ou fizer push para a branch `main`, os seguintes fluxos rodarão automaticamente e em paralelo na nuvem:
+1. **Backend:** Instalação das dependências do composer, estruturação de banco SQLite na memória virtual, verificação de padrão de código (`vendor/bin/pint --test`) e execução rigorosa de asserções via (`php artisan test --parallel`).
+2. **Frontend:** Instalação via NPM, execução do lint (`npm run lint`), checagem do build type-safe (`npm run build`) e, por fim, testes (`npm run test`).
 
-Sem Docker:
-
-- sqlite local em `database/database.sqlite`
-
-Com Sail:
-
-```bash
-./vendor/bin/sail up -d mysql
-```
-
-### Ambiente combinado
-
-Pelo Composer:
-
-```bash
-composer setup
-composer dev
-```
-
-Pelo `package.json` raiz:
-
-```bash
-npm install
-npm run dev
-```
-
-## Endpoints principais
-
-### API pública
-
-- `GET /api/v1/regions`
-- `GET /api/v1/cities`
-- `GET /api/v1/cities/{idOrSlug}`
-- `GET /api/v1/events`
-- `GET /api/v1/events/{idOrSlug}`
-
-Aliases legados continuam disponíveis temporariamente:
-
-- `GET /api/regions`
-- `GET /api/cities`
-- `GET /api/cities/{idOrSlug}`
-- `GET /api/events`
-- `GET /api/events/{idOrSlug}`
-- `GET /api/cidades`
-- `GET /api/eventos`
-
-### API administrativa
-
-- `POST /api/admin/v1/auth/login`
-- `GET /api/admin/v1/auth/me`
-- `POST /api/admin/v1/auth/logout`
-- CRUD protegido para `cities`, `events`, `regions` e `interest-tags`
-
-Detalhes em `docs/admin-api.md`.
-
-## Testes
-
-### Backend
-
-```bash
-php artisan test
-```
-
-Com Sail:
-
-```bash
-./vendor/bin/sail php artisan test
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm run test
-```
-
-### Atalhos no root
-
-```bash
-npm run test
-npm run lint
-composer test
-composer lint
-```
-
-## Qualidade
-
-- backend: `Laravel Pint`
-- frontend: `ESLint`
-- frontend tests: `Vitest + Testing Library`
-- backend tests: `PHPUnit`
-
-## Observações de arquitetura
-
-- o backend concentra domínio, persistência, validação, autenticação e serialização
-- o frontend concentra interface, roteamento client-side e consumo da API
-- `App\Models` permanece como camada fina de compatibilidade sobre os modelos em `app/Domain`
-- a área `/admin` do frontend já está preparada para expansão sem introduzir um dashboard acoplado cedo demais
+Recomendamos que você rode a sequência `npm run lint && npm run test && npm run build` localmente antes de commitar para economizar tempo no CI.

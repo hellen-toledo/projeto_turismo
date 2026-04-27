@@ -1,16 +1,12 @@
 interface LoadingStateProps {
-  label: string;
+  label?: string;
 }
 
-export const LoadingState = ({ label }: LoadingStateProps) => {
+export const LoadingState = ({ label = 'Carregando...' }: LoadingStateProps) => {
   return (
-    <div
-      className="rounded-2xl border border-gray-100 bg-white p-10 text-center text-gray-500"
-      role="status"
-      aria-live="polite"
-    >
-      <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-green-600" />
-      <p className="italic">{label}</p>
+    <div className="flex flex-col items-center justify-center py-16">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-800 border-t-green-500" />
+      <p className="mt-4 font-medium text-gray-400">{label}</p>
     </div>
   );
 };

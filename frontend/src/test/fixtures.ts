@@ -1,4 +1,4 @@
-import type { City, Event, InterestTag, RegionSummary } from '../shared/types/api';
+import type { City, Event, InterestTag, PaginatedResponse, RegionSummary } from '../shared/types/api';
 
 export const makeRegion = (overrides: Partial<RegionSummary> = {}): RegionSummary => ({
   id: 1,
@@ -47,3 +47,15 @@ export const makeEvent = (overrides: Partial<Event> = {}): Event => ({
   ...overrides,
 });
 
+export const makePaginatedResponse = <T>(data: T[], overrides: Partial<PaginatedResponse<T>['meta']> = {}): PaginatedResponse<T> => ({
+  data,
+  meta: {
+    currentPage: 1,
+    lastPage: 1,
+    perPage: data.length || 1,
+    total: data.length,
+    from: data.length ? 1 : null,
+    to: data.length || null,
+    ...overrides,
+  },
+});

@@ -8,12 +8,22 @@ use App\Models\InterestTag;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class AdminApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        foreach (['admin@example.com', 'user@example.com', 'valid-login@example.com', 'invalid-login@example.com'] as $email) {
+            RateLimiter::clear("admin-login|{$email}|127.0.0.1");
+        }
+    }
 
     public function test_admin_can_login_and_receive_token(): void
     {
@@ -22,7 +32,7 @@ class AdminApiTest extends TestCase
             'password' => 'password',
         ]);
 
-        $this->postJson('/api/admin/v1/auth/login', [
+        $this->postJson('/api/v1/admin/auth/login', [
             'email' => $admin->email,
             'password' => 'password',
             'deviceName' => 'phpunit',
@@ -31,11 +41,52 @@ class AdminApiTest extends TestCase
             ->assertJsonPath('tokenType', 'Bearer')
             ->assertJsonPath('user.email', 'admin@example.com')
             ->assertJsonPath('user.isAdmin', true);
+
+        $token = $admin->tokens()->latest('id')->first();
+
+        $this->assertNotNull($token);
+        $this->assertTrue($token->can('admin'));
+    }
+
+    public function test_login_with_invalid_password_returns_generic_error(): void
+    {
+        $admin = User::factory()->admin()->create([
+            'email' => 'admin@example.com',
+        ]);
+
+        $this->postJson('/api/v1/admin/auth/login', [
+            'email' => $admin->email,
+            'password' => 'wrong-password',
+            'deviceName' => 'phpunit',
+        ])
+            ->assertStatus(422)
+            ->assertExactJson([
+                'message' => 'Invalid admin credentials.',
+            ]);
+    }
+
+    public function test_non_admin_user_cannot_obtain_admin_token(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'user@example.com',
+        ]);
+
+        $this->postJson('/api/v1/admin/auth/login', [
+            'email' => $user->email,
+            'password' => 'password',
+            'deviceName' => 'phpunit',
+        ])
+            ->assertStatus(422)
+            ->assertExactJson([
+                'message' => 'Invalid admin credentials.',
+            ]);
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
     }
 
     public function test_guest_cannot_access_admin_resources(): void
     {
-        $this->postJson('/api/admin/v1/cities', [])
+        $this->postJson('/api/v1/admin/cities', [])
             ->assertUnauthorized()
             ->assertJson([
                 'message' => 'Unauthenticated.',
@@ -54,13 +105,13 @@ class AdminApiTest extends TestCase
         ];
 
         $this->withHeaders($headers)
-            ->getJson('/api/admin/v1/auth/me')
+            ->getJson('/api/v1/admin/auth/me')
             ->assertOk()
             ->assertJsonPath('email', 'admin@example.com')
             ->assertJsonPath('isAdmin', true);
 
         $this->withHeaders($headers)
-            ->postJson('/api/admin/v1/auth/logout')
+            ->postJson('/api/v1/admin/auth/logout')
             ->assertOk()
             ->assertJson([
                 'message' => 'Logged out successfully.',
@@ -73,11 +124,39 @@ class AdminApiTest extends TestCase
     {
         Sanctum::actingAs(User::factory()->create());
 
-        $this->getJson('/api/admin/v1/regions')
+        $this->getJson('/api/v1/admin/regions')
             ->assertForbidden()
             ->assertJson([
                 'message' => 'Forbidden.',
             ]);
+    }
+
+    public function test_admin_login_is_rate_limited(): void
+    {
+        $email = 'ratelimit-'.uniqid().'@example.com';
+
+        User::factory()->admin()->create([
+            'email' => $email,
+        ]);
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->postJson('/api/v1/admin/auth/login', [
+                'email' => $email,
+                'password' => 'wrong-password',
+                'deviceName' => 'phpunit',
+            ])
+                ->assertStatus(422)
+                ->assertExactJson([
+                    'message' => 'Invalid admin credentials.',
+                ]);
+        }
+
+        $this->postJson('/api/v1/admin/auth/login', [
+            'email' => $email,
+            'password' => 'wrong-password',
+            'deviceName' => 'phpunit',
+        ])
+            ->assertStatus(429);
     }
 
     public function test_admin_can_list_protected_resources(): void
@@ -89,37 +168,39 @@ class AdminApiTest extends TestCase
         $city = City::factory()->for($region)->create();
         Event::factory()->for($city)->create();
 
-        $this->getJson('/api/admin/v1/regions')
+        $this->getJson('/api/v1/admin/regions')
             ->assertOk()
             ->assertJsonCount(1);
 
-        $this->getJson('/api/admin/v1/interest-tags')
+        $this->getJson('/api/v1/admin/interest-tags')
             ->assertOk()
             ->assertJsonCount(1)
             ->assertJsonPath('0.slug', $tag->slug);
 
-        $this->getJson('/api/admin/v1/cities')
+        $this->getJson('/api/v1/admin/cities')
             ->assertOk()
-            ->assertJsonCount(1);
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('meta.total', 1);
 
-        $this->getJson('/api/admin/v1/events')
+        $this->getJson('/api/v1/admin/events')
             ->assertOk()
-            ->assertJsonCount(1);
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('meta.total', 1);
     }
 
     public function test_admin_can_manage_regions_tags_and_cities(): void
     {
         $this->authenticateAsAdmin();
 
-        $regionResponse = $this->postJson('/api/admin/v1/regions', [
+        $regionResponse = $this->postJson('/api/v1/admin/regions', [
             'name' => 'Chapada dos Veadeiros',
         ])->assertCreated();
 
-        $tagResponse = $this->postJson('/api/admin/v1/interest-tags', [
+        $tagResponse = $this->postJson('/api/v1/admin/interest-tags', [
             'name' => 'Ecoturismo',
         ])->assertCreated();
 
-        $cityResponse = $this->postJson('/api/admin/v1/cities', $this->validCityPayload(
+        $cityResponse = $this->postJson('/api/v1/admin/cities', $this->validCityPayload(
             regionId: $regionResponse->json('id'),
             interestTagIds: [$tagResponse->json('id')],
         ));
@@ -131,22 +212,22 @@ class AdminApiTest extends TestCase
 
         $cityId = $cityResponse->json('id');
 
-        $this->patchJson("/api/admin/v1/cities/{$cityId}", [
+        $this->patchJson("/api/v1/admin/cities/{$cityId}", [
             'summary' => 'Resumo atualizado.',
         ])
             ->assertOk()
             ->assertJsonPath('summary', 'Resumo atualizado.');
 
-        $this->getJson('/api/admin/v1/cities')
+        $this->getJson('/api/v1/admin/cities')
             ->assertOk()
-            ->assertJsonCount(1);
+            ->assertJsonCount(1, 'data');
     }
 
     public function test_admin_city_creation_validates_required_fields(): void
     {
         $this->authenticateAsAdmin();
 
-        $this->postJson('/api/admin/v1/cities', [])
+        $this->postJson('/api/v1/admin/cities', [])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['name', 'description', 'regionId']);
     }
@@ -164,7 +245,7 @@ class AdminApiTest extends TestCase
             'slug' => 'turismo-nautico',
         ]);
 
-        $response = $this->postJson('/api/admin/v1/events', $this->validEventPayload(
+        $response = $this->postJson('/api/v1/admin/events', $this->validEventPayload(
             cityId: $city->id,
             interestTagIds: [$tag->id],
         ));
@@ -177,7 +258,7 @@ class AdminApiTest extends TestCase
 
         $eventId = $response->json('id');
 
-        $this->deleteJson("/api/admin/v1/events/{$eventId}")
+        $this->deleteJson("/api/v1/admin/events/{$eventId}")
             ->assertNoContent();
     }
 
@@ -185,9 +266,131 @@ class AdminApiTest extends TestCase
     {
         $this->authenticateAsAdmin();
 
-        $this->postJson('/api/admin/v1/events', [])
+        $this->postJson('/api/v1/admin/events', [])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['title', 'description', 'startsAt', 'cityId']);
+    }
+
+    public function test_admin_city_listing_supports_search_filters_and_draft_visibility(): void
+    {
+        $this->authenticateAsAdmin();
+
+        $chapada = Region::factory()->create([
+            'name' => 'Chapada dos Veadeiros',
+        ]);
+        $serra = Region::factory()->create([
+            'name' => 'Serra da Mesa',
+        ]);
+        $ecoturismo = InterestTag::factory()->create([
+            'name' => 'Ecoturismo',
+            'slug' => 'ecoturismo',
+        ]);
+        $nautico = InterestTag::factory()->create([
+            'name' => 'Turismo Nautico',
+            'slug' => 'turismo-nautico',
+        ]);
+
+        $altoParaiso = City::factory()->for($chapada)->create([
+            'name' => 'Alto Paraiso de Goias',
+            'slug' => 'alto-paraiso-de-goias',
+            'summary' => 'Destino de ecoturismo',
+            'is_published' => true,
+        ]);
+        $altoParaiso->interestTags()->sync([$ecoturismo->id]);
+
+        $cidadeRascunho = City::factory()->unpublished()->for($serra)->create([
+            'name' => 'Cidade Rascunho',
+            'slug' => 'cidade-rascunho',
+            'summary' => 'Operacao nautica',
+        ]);
+        $cidadeRascunho->interestTags()->sync([$nautico->id]);
+
+        $this->getJson('/api/v1/admin/cities?search=ecoturismo&region_id='.$chapada->id.'&tag=ecoturismo&per_page=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'alto-paraiso-de-goias')
+            ->assertJsonPath('meta.total', 1);
+
+        $this->getJson('/api/v1/admin/cities?published=0')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'cidade-rascunho');
+    }
+
+    public function test_admin_event_listing_supports_search_filters_and_draft_visibility(): void
+    {
+        $this->authenticateAsAdmin();
+
+        $city = City::factory()->create([
+            'name' => 'Minacu',
+            'slug' => 'minacu',
+        ]);
+        $otherCity = City::factory()->create([
+            'name' => 'Sao Jorge',
+            'slug' => 'sao-jorge',
+        ]);
+        $nautico = InterestTag::factory()->create([
+            'name' => 'Turismo Nautico',
+            'slug' => 'turismo-nautico',
+        ]);
+
+        $festival = Event::factory()->for($city)->future()->featured()->create([
+            'title' => 'Festival do Lago',
+            'slug' => 'festival-do-lago',
+            'description' => 'Agenda nautica',
+            'is_published' => true,
+        ]);
+        $festival->interestTags()->sync([$nautico->id]);
+
+        Event::factory()->for($otherCity)->unpublished()->future()->create([
+            'title' => 'Evento Rascunho',
+            'slug' => 'evento-rascunho',
+            'description' => 'Nao publicado',
+        ]);
+
+        $this->getJson('/api/v1/admin/events?search=nautica&city_id='.$city->id.'&tag=turismo-nautico&featured=1&per_page=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'festival-do-lago')
+            ->assertJsonPath('meta.total', 1);
+
+        $this->getJson('/api/v1/admin/events?published=0')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'evento-rascunho');
+    }
+
+    public function test_admin_can_delete_city(): void
+    {
+        $this->authenticateAsAdmin();
+
+        $city = City::factory()->create();
+
+        $this->deleteJson("/api/v1/admin/cities/{$city->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('cities', ['id' => $city->id]);
+    }
+
+    public function test_admin_can_update_event(): void
+    {
+        $this->authenticateAsAdmin();
+
+        $event = Event::factory()->create([
+            'title' => 'Old Title',
+            'starts_at' => now()->addDay(),
+        ]);
+
+        $this->patchJson("/api/v1/admin/events/{$event->id}", [
+            'title' => 'New Title',
+        ])
+            ->assertOk()
+            ->assertJsonPath('title', 'New Title');
+
+        $this->assertDatabaseHas('events', [
+            'id' => $event->id,
+            'title' => 'New Title',
+        ]);
     }
 
     private function authenticateAsAdmin(): User

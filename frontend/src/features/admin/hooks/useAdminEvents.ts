@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Event } from '../../../shared/types/api';
+import type { Event, EventListParams } from '../../../shared/types/api';
 import { createAdminEvent, deleteAdminEvent, getAdminEvents, updateAdminEvent } from '../api/adminEventsApi';
 import type { EventFormValues } from '../types/admin';
 
-export const useAdminEvents = () =>
+export const useAdminEvents = (params: EventListParams = {}) =>
   useQuery({
-    queryKey: ['admin', 'events'],
-    queryFn: getAdminEvents,
+    queryKey: ['admin', 'events', params],
+    queryFn: () => getAdminEvents(params),
   });
 
 export const useAdminEventMutations = () => {

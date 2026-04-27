@@ -14,7 +14,7 @@ class EventSeeder extends Seeder
     public function run(): void
     {
         $altoParaiso = City::query()->where('slug', 'alto-paraiso-de-goias')->firstOrFail();
-        $minacu = City::query()->where('slug', 'minacu')->firstOrFail();
+        $porangatu = City::query()->where('slug', 'porangatu')->firstOrFail();
         $tags = InterestTag::query()->pluck('id', 'slug');
 
         $festival = Event::query()->updateOrCreate(
@@ -32,29 +32,29 @@ class EventSeeder extends Seeder
             ],
         );
 
-        $regata = Event::query()->updateOrCreate(
-            ['slug' => 'encontro-nautico-serra-da-mesa'],
+        $torneio = Event::query()->updateOrCreate(
+            ['slug' => 'torneio-de-pesca-esportiva'],
             [
-                'title' => 'Encontro Náutico Serra da Mesa',
-                'description' => 'Programação voltada a esportes aquáticos, gastronomia e divulgação do potencial turístico do lago.',
+                'title' => 'Torneio de Pesca Esportiva',
+                'description' => 'Campeonato de pesca esportiva no lago, com premiação e confraternização.',
                 'starts_at' => Carbon::now()->addMonths(3)->setTime(9, 0),
                 'ends_at' => Carbon::now()->addMonths(3)->setTime(18, 0),
                 'cover_image' => 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1200&auto=format&fit=crop',
-                'external_url' => 'https://example.com/encontro-nautico',
-                'city_id' => $minacu->id,
+                'external_url' => 'https://example.com/torneio-pesca',
+                'city_id' => $porangatu->id,
                 'is_featured' => false,
                 'is_published' => true,
             ],
         );
 
-        $festival->interestTags()->sync([
-            $tags[Str::slug('Ecoturismo')],
-            $tags[Str::slug('Cultura Popular')],
-        ]);
+        $festival->interestTags()->sync(array_filter([
+            $tags[Str::slug('Ecoturismo')] ?? null,
+            $tags[Str::slug('Trilhas')] ?? null,
+        ]));
 
-        $regata->interestTags()->sync([
-            $tags[Str::slug('Turismo Náutico')],
-            $tags[Str::slug('Gastronomia')],
-        ]);
+        $torneio->interestTags()->sync(array_filter([
+            $tags[Str::slug('Pesca Esportiva')] ?? null,
+            $tags[Str::slug('Lagos')] ?? null,
+        ]));
     }
 }

@@ -4,6 +4,47 @@ export interface RegionSummary {
   citiesCount?: number;
 }
 
+export interface PaginatedMeta {
+  currentPage: number;
+  lastPage: number;
+  perPage: number;
+  total: number;
+  from: number | null;
+  to: number | null;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: PaginatedMeta;
+}
+
+export interface PaginationParams {
+  page?: number;
+  perPage?: number;
+}
+
+export interface CityListParams extends PaginationParams {
+  search?: string;
+  q?: string;
+  region?: string;
+  regionId?: number;
+  tag?: string;
+  tagId?: number;
+  published?: boolean;
+}
+
+export interface EventListParams extends PaginationParams {
+  search?: string;
+  q?: string;
+  city?: string;
+  cityId?: number;
+  tag?: string;
+  tagId?: number;
+  featured?: boolean;
+  future?: boolean;
+  published?: boolean;
+}
+
 export interface AdminUser {
   id: number;
   name: string;

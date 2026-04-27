@@ -8,10 +8,18 @@ class ListCitiesRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        $payload = [];
+
         if ($this->has('published')) {
-            $this->merge([
-                'published' => $this->boolean('published'),
-            ]);
+            $payload['published'] = $this->boolean('published');
+        }
+
+        if (! $this->filled('search') && $this->filled('q')) {
+            $payload['search'] = $this->string('q')->toString();
+        }
+
+        if ($payload !== []) {
+            $this->merge($payload);
         }
     }
 
@@ -23,7 +31,14 @@ class ListCitiesRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
+            'q' => ['nullable', 'string', 'max:255'],
+            'search' => ['nullable', 'string', 'max:255'],
             'region' => ['nullable', 'string', 'max:255'],
+            'region_id' => ['sometimes', 'integer', 'exists:regions,id'],
+            'tag' => ['nullable', 'string', 'max:255'],
+            'tag_id' => ['sometimes', 'integer', 'exists:interest_tags,id'],
             'published' => ['sometimes', 'boolean'],
         ];
     }

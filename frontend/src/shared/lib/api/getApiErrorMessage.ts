@@ -28,3 +28,20 @@ export const getApiErrorMessage = (error: unknown, fallback = 'Não foi possíve
 
   return fallback;
 };
+
+export const getApiValidationErrors = (error: unknown): Record<string, string> => {
+  const result: Record<string, string> = {};
+
+  if (axios.isAxiosError<ValidationErrorResponse>(error)) {
+    const validationErrors = error.response?.data?.errors;
+    if (validationErrors) {
+      for (const [key, messages] of Object.entries(validationErrors)) {
+        if (messages && messages.length > 0) {
+          result[key] = messages[0];
+        }
+      }
+    }
+  }
+
+  return result;
+};

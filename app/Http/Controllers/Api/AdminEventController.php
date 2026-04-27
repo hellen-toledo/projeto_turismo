@@ -21,7 +21,7 @@ class AdminEventController extends Controller
     {
         $this->authorize('viewAny', Event::class);
 
-        return EventResource::collection($listEvents($request->validated()));
+        return EventResource::collection($listEvents($request->validated(), true));
     }
 
     public function store(StoreEventRequest $request, CreateEventAction $createEvent): Response

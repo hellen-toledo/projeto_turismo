@@ -65,7 +65,7 @@ Não deve ser responsável por:
 - Actions de aplicação: `App\\Application\\<Contexto>\\<Verbo><Entidade>Action`
 - Modelos de domínio: `App\\Domain\\<Contexto>\\<Entidade>`
 - Wrappers legados de compatibilidade permanecem em `App\\Models` quando necessário
-- Endpoints canônicos: substantivos plurais em inglês, como `/api/cities` e `/api/events`
+- Endpoints canônicos: substantivos plurais em inglês sob `/api/v1`, como `/api/v1/cities` e `/api/v1/events`
 - Aliases legados em português podem existir temporariamente para compatibilidade
 - Componentes React: `PascalCase`
 - Hooks React: prefixo `use`, como `useCities`, `useEvents` e `useAdminAuth`
@@ -98,7 +98,7 @@ Frontend local padrão: `http://localhost:5173`
 Se necessário, configure:
 
 ```bash
-VITE_API_URL=http://localhost:8000/api
+VITE_API_URL=http://localhost:8000/api/v1
 ```
 
 ### Execução combinada
@@ -143,4 +143,4 @@ Para `cities` e `events`, o backend segue o mesmo fluxo:
 - O frontend não foi movido para dentro do Laravel.
 - O backend continua compatível com a estrutura Laravel existente.
 - Foram removidos os artefatos operacionais do frontend padrão do Laravel para evitar duplicidade arquitetural.
-- Os aliases `/api/cidades` e `/api/eventos` foram mantidos temporariamente para reduzir quebra de clientes existentes.
+- Os aliases legados fora de `/api/v1` devem existir apenas temporariamente e marcados como deprecated.

@@ -9,6 +9,7 @@
         "frontend:build": "npm --prefix frontend run build",
         "frontend:test": "npm --prefix frontend run test",
         "frontend:lint": "npm --prefix frontend run lint",
+        "build": "npm run frontend:build",
         "test": "npm run backend:test && npm run frontend:test",
         "lint": "npm run backend:lint && npm run frontend:lint",
         "dev": "concurrently -c \"#93c5fd,#fdba74\" \"php artisan serve\" \"npm --prefix frontend run dev\" --names=api,frontend --kill-others"

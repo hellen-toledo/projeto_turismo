@@ -10,7 +10,7 @@ class InterestTagSeeder extends Seeder
 {
     public function run(): void
     {
-        $tags = ['Ecoturismo', 'Cachoeiras', 'Cultura Popular', 'Gastronomia', 'Turismo Náutico', 'Trilhas'];
+        $tags = ['Ecoturismo', 'Pesca Esportiva', 'Lagos', 'Trilhas'];
 
         foreach ($tags as $tag) {
             InterestTag::query()->updateOrCreate(

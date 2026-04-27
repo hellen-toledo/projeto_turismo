@@ -7,6 +7,7 @@ use App\Models\Event;
 use App\Models\InterestTag;
 use App\Models\Region;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Config;
 use Tests\TestCase;
 
 class PublicApiTest extends TestCase
@@ -15,6 +16,8 @@ class PublicApiTest extends TestCase
 
     public function test_root_route_exposes_backend_api_metadata(): void
     {
+        Config::set('app.key', 'base64:ZMOeqtf/bRJlK3spROcA9ItdXUMRXEmkiDPf6sqHojI=');
+
         $this->get('/')
             ->assertOk()
             ->assertJson([
@@ -35,7 +38,7 @@ class PublicApiTest extends TestCase
 
         City::factory()->count(2)->for($regionWithCities)->create();
 
-        $this->getJson('/api/regions')
+        $this->getJson('/api/v1/regions')
             ->assertOk()
             ->assertJsonCount(2)
             ->assertJsonFragment([
@@ -59,10 +62,80 @@ class PublicApiTest extends TestCase
             'slug' => 'cidade-oculta',
         ]);
 
-        $this->getJson('/api/cities?published=1')
+        $this->getJson('/api/v1/cities?published=1')
             ->assertOk()
-            ->assertJsonCount(1)
-            ->assertJsonPath('0.slug', 'alto-paraiso-de-goias');
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'alto-paraiso-de-goias')
+            ->assertJsonPath('meta.total', 1);
+    }
+
+    public function test_interest_tags_endpoint_returns_tags_in_name_order(): void
+    {
+        InterestTag::factory()->create([
+            'name' => 'Trilhas',
+            'slug' => 'trilhas',
+        ]);
+        InterestTag::factory()->create([
+            'name' => 'Ecoturismo',
+            'slug' => 'ecoturismo',
+        ]);
+
+        $this->getJson('/api/v1/interest-tags')
+            ->assertOk()
+            ->assertJsonCount(2)
+            ->assertJsonPath('0.slug', 'ecoturismo')
+            ->assertJsonPath('1.slug', 'trilhas');
+    }
+
+    public function test_cities_endpoint_is_paginated_and_supports_search_region_and_tag_filters(): void
+    {
+        $chapada = Region::factory()->create([
+            'name' => 'Chapada dos Veadeiros',
+        ]);
+        $serra = Region::factory()->create([
+            'name' => 'Serra da Mesa',
+        ]);
+        $ecoturismo = InterestTag::factory()->create([
+            'name' => 'Ecoturismo',
+            'slug' => 'ecoturismo',
+        ]);
+        $nautico = InterestTag::factory()->create([
+            'name' => 'Turismo Nautico',
+            'slug' => 'turismo-nautico',
+        ]);
+
+        $altoParaiso = City::factory()->for($chapada)->create([
+            'name' => 'Alto Paraiso de Goias',
+            'slug' => 'alto-paraiso-de-goias',
+            'summary' => 'Base de ecoturismo',
+        ]);
+        $altoParaiso->interestTags()->sync([$ecoturismo->id]);
+
+        $minacu = City::factory()->for($serra)->create([
+            'name' => 'Minacu',
+            'slug' => 'minacu',
+            'summary' => 'Lago e pesca esportiva',
+        ]);
+        $minacu->interestTags()->sync([$nautico->id]);
+
+        City::factory()->unpublished()->for($chapada)->create([
+            'name' => 'Cidade Rascunho',
+            'slug' => 'cidade-rascunho',
+            'summary' => 'Nao deve aparecer',
+        ]);
+
+        $this->getJson('/api/v1/cities?search=ecoturismo&region_id='.$chapada->id.'&tag=ecoturismo&per_page=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'alto-paraiso-de-goias')
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.per_page', 1)
+            ->assertJsonPath('meta.total', 1);
+
+        $this->getJson('/api/v1/cities?region=Serra%20da%20Mesa&tag_id='.$nautico->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'minacu');
     }
 
     public function test_cities_endpoint_supports_basic_region_filters(): void
@@ -85,13 +158,13 @@ class PublicApiTest extends TestCase
 
         $this->getJson("/api/v1/cities?region={$chapada->id}")
             ->assertOk()
-            ->assertJsonCount(1)
-            ->assertJsonPath('0.slug', 'sao-jorge');
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'sao-jorge');
 
         $this->getJson('/api/v1/cities?region=Serra%20da%20Mesa')
             ->assertOk()
-            ->assertJsonCount(1)
-            ->assertJsonPath('0.slug', 'minacu');
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'minacu');
     }
 
     public function test_city_show_endpoint_returns_city_by_slug_with_relationships(): void
@@ -106,7 +179,7 @@ class PublicApiTest extends TestCase
         $tags = InterestTag::factory()->count(2)->create();
         $city->interestTags()->sync($tags->modelKeys());
 
-        $this->getJson('/api/cities/alto-paraiso-de-goias')
+        $this->getJson('/api/v1/cities/alto-paraiso-de-goias')
             ->assertOk()
             ->assertJsonPath('slug', 'alto-paraiso-de-goias')
             ->assertJsonPath('region.name', 'Chapada dos Veadeiros')
@@ -115,7 +188,7 @@ class PublicApiTest extends TestCase
 
     public function test_city_show_endpoint_returns_not_found_for_unknown_slug(): void
     {
-        $this->getJson('/api/cities/inexistente')
+        $this->getJson('/api/v1/cities/inexistente')
             ->assertNotFound()
             ->assertExactJson([
                 'message' => 'Resource not found.',
@@ -137,10 +210,64 @@ class PublicApiTest extends TestCase
             'slug' => 'evento-interno',
         ]);
 
-        $this->getJson('/api/events?published=1')
+        $this->getJson('/api/v1/events?published=1')
             ->assertOk()
-            ->assertJsonCount(1)
-            ->assertJsonPath('0.slug', 'festival-do-lago');
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'festival-do-lago')
+            ->assertJsonPath('meta.total', 1);
+    }
+
+    public function test_events_endpoint_is_paginated_and_supports_search_city_tag_and_featured_filters(): void
+    {
+        $city = City::factory()->create([
+            'name' => 'Minacu',
+            'slug' => 'minacu',
+        ]);
+        $otherCity = City::factory()->create([
+            'name' => 'Sao Jorge',
+            'slug' => 'sao-jorge',
+        ]);
+        $nautico = InterestTag::factory()->create([
+            'name' => 'Turismo Nautico',
+            'slug' => 'turismo-nautico',
+        ]);
+        $trilhas = InterestTag::factory()->create([
+            'name' => 'Trilhas',
+            'slug' => 'trilhas',
+        ]);
+
+        $festival = Event::factory()->for($city)->future()->featured()->create([
+            'title' => 'Festival do Lago',
+            'slug' => 'festival-do-lago',
+            'description' => 'Programacao nautica e gastronomia.',
+        ]);
+        $festival->interestTags()->sync([$nautico->id]);
+
+        $trilha = Event::factory()->for($otherCity)->future()->create([
+            'title' => 'Circuito de Trilhas',
+            'slug' => 'circuito-de-trilhas',
+            'description' => 'Vivencia na chapada.',
+        ]);
+        $trilha->interestTags()->sync([$trilhas->id]);
+
+        Event::factory()->for($city)->unpublished()->future()->create([
+            'title' => 'Evento Rascunho',
+            'slug' => 'evento-rascunho',
+            'description' => 'Nao deve aparecer na API publica.',
+        ]);
+
+        $this->getJson('/api/v1/events?search=nautica&city_id='.$city->id.'&tag=turismo-nautico&featured=1&per_page=1')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'festival-do-lago')
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.per_page', 1)
+            ->assertJsonPath('meta.total', 1);
+
+        $this->getJson('/api/v1/events?city=sao-jorge&tag_id='.$trilhas->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'circuito-de-trilhas');
     }
 
     public function test_events_endpoint_supports_basic_filters(): void
@@ -166,8 +293,8 @@ class PublicApiTest extends TestCase
 
         $this->getJson('/api/v1/events?future=1&featured=1&city=minacu')
             ->assertOk()
-            ->assertJsonCount(1)
-            ->assertJsonPath('0.slug', 'festival-do-lago');
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'festival-do-lago');
     }
 
     public function test_event_show_endpoint_returns_event_by_slug_with_relationships(): void
@@ -183,7 +310,7 @@ class PublicApiTest extends TestCase
         $tags = InterestTag::factory()->count(2)->create();
         $event->interestTags()->sync($tags->modelKeys());
 
-        $this->getJson('/api/events/festival-do-lago')
+        $this->getJson('/api/v1/events/festival-do-lago')
             ->assertOk()
             ->assertJsonPath('slug', 'festival-do-lago')
             ->assertJsonPath('city.slug', 'minacu')
@@ -192,7 +319,7 @@ class PublicApiTest extends TestCase
 
     public function test_event_show_endpoint_returns_not_found_for_unknown_slug(): void
     {
-        $this->getJson('/api/events/inexistente')
+        $this->getJson('/api/v1/events/inexistente')
             ->assertNotFound()
             ->assertExactJson([
                 'message' => 'Resource not found.',
@@ -201,10 +328,36 @@ class PublicApiTest extends TestCase
 
     public function test_public_api_rejects_write_methods(): void
     {
-        $this->postJson('/api/cities', [])
+        $this->postJson('/api/v1/cities', [])
             ->assertStatus(405)
             ->assertExactJson([
                 'message' => 'Method not allowed.',
             ]);
+    }
+
+    public function test_events_endpoint_orders_by_date(): void
+    {
+        $city = City::factory()->create();
+
+        Event::factory()->for($city)->create([
+            'title' => 'Event 2',
+            'starts_at' => now()->addDays(2),
+        ]);
+
+        Event::factory()->for($city)->create([
+            'title' => 'Event 1',
+            'starts_at' => now()->addDay(),
+        ]);
+
+        Event::factory()->for($city)->create([
+            'title' => 'Event 3',
+            'starts_at' => now()->addDays(3),
+        ]);
+
+        $this->getJson('/api/v1/events')
+            ->assertOk()
+            ->assertJsonPath('data.0.title', 'Event 1')
+            ->assertJsonPath('data.1.title', 'Event 2')
+            ->assertJsonPath('data.2.title', 'Event 3');
     }
 }

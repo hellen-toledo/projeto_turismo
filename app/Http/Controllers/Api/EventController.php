@@ -21,7 +21,7 @@ class EventController extends Controller
 {
     public function index(ListEventsRequest $request, ListEventsAction $listEvents): AnonymousResourceCollection
     {
-        return EventResource::collection($listEvents($request->validated()));
+        return EventResource::collection($listEvents($request->validated(), false));
     }
 
     public function store(StoreEventRequest $request, CreateEventAction $createEvent): Response

@@ -1,6 +1,6 @@
 import { screen } from '@testing-library/react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { makeCity, makeEvent } from '../../test/fixtures';
+import { makeCity, makeEvent, makePaginatedResponse } from '../../test/fixtures';
 import { renderWithProviders } from '../../test/utils';
 import { HomePage } from '../HomePage';
 
@@ -52,8 +52,8 @@ describe('HomePage', () => {
   });
 
   it('renders empty states when there are no published resources', () => {
-    mockUseCities.mockReturnValue(createQueryState({ data: [] }));
-    mockUseEvents.mockReturnValue(createQueryState({ data: [] }));
+    mockUseEvents.mockReturnValue(createQueryState({ data: makePaginatedResponse([]) }));
+    mockUseCities.mockReturnValue(createQueryState({ data: makePaginatedResponse([]) }));
 
     renderWithProviders(<HomePage />);
 
@@ -64,18 +64,18 @@ describe('HomePage', () => {
   it('renders featured cities and upcoming events from the query data', () => {
     mockUseCities.mockReturnValue(
       createQueryState({
-        data: [
+        data: makePaginatedResponse([
           makeCity({ id: 1, name: 'Alto Paraiso de Goias' }),
           makeCity({ id: 2, name: 'Sao Jorge', slug: 'sao-jorge' }),
-        ],
+        ]),
       }),
     );
     mockUseEvents.mockReturnValue(
       createQueryState({
-        data: [
+        data: makePaginatedResponse([
           makeEvent({ id: 1, title: 'Festival do Lago' }),
           makeEvent({ id: 2, title: 'Circuito do Cerrado', slug: 'circuito-do-cerrado' }),
-        ],
+        ]),
       }),
     );
 
@@ -92,4 +92,3 @@ describe('HomePage', () => {
     expect(screen.getByRole('link', { name: 'Ver agenda completa' })).toHaveAttribute('href', '/eventos');
   });
 });
-

@@ -13,7 +13,7 @@ class CitySeeder extends Seeder
     public function run(): void
     {
         $chapada = Region::query()->where('name', 'Chapada dos Veadeiros')->firstOrFail();
-        $serraDaMesa = Region::query()->where('name', 'Serra da Mesa')->firstOrFail();
+        $porangatu = Region::query()->where('name', 'Polo Porangatu/Norte')->firstOrFail();
 
         $altoParaiso = City::query()->updateOrCreate(
             ['slug' => 'alto-paraiso-de-goias'],
@@ -27,29 +27,28 @@ class CitySeeder extends Seeder
             ],
         );
 
-        $minacu = City::query()->updateOrCreate(
-            ['slug' => 'minacu'],
+        $porangatuCity = City::query()->updateOrCreate(
+            ['slug' => 'porangatu'],
             [
-                'name' => 'Minaçu',
-                'summary' => 'Destino ligado ao Lago Serra da Mesa e ao turismo náutico.',
-                'description' => 'Cidade de apoio para pesca esportiva, passeios embarcados e experiências junto ao reservatório da Serra da Mesa.',
+                'name' => 'Porangatu',
+                'summary' => 'Destino de lagos e pesca esportiva.',
+                'description' => 'Cidade de apoio para pesca esportiva, passeios embarcados e experiências nos lagos da região norte de Goiás.',
                 'cover_image' => 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1200&auto=format&fit=crop',
-                'region_id' => $serraDaMesa->id,
+                'region_id' => $porangatu->id,
                 'is_published' => true,
             ],
         );
 
         $tags = InterestTag::query()->pluck('id', 'slug');
 
-        $altoParaiso->interestTags()->sync([
-            $tags[Str::slug('Ecoturismo')],
-            $tags[Str::slug('Cachoeiras')],
-            $tags[Str::slug('Trilhas')],
-        ]);
+        $altoParaiso->interestTags()->sync(array_filter([
+            $tags[Str::slug('Ecoturismo')] ?? null,
+            $tags[Str::slug('Trilhas')] ?? null,
+        ]));
 
-        $minacu->interestTags()->sync([
-            $tags[Str::slug('Turismo Náutico')],
-            $tags[Str::slug('Gastronomia')],
-        ]);
+        $porangatuCity->interestTags()->sync(array_filter([
+            $tags[Str::slug('Lagos')] ?? null,
+            $tags[Str::slug('Pesca Esportiva')] ?? null,
+        ]));
     }
 }

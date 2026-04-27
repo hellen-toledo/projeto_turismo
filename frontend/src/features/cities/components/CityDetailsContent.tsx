@@ -10,7 +10,7 @@ export const CityDetailsContent = ({ city }: CityDetailsContentProps) => {
     <article className="mx-auto max-w-7xl p-4 md:p-8">
       <Link
         to="/cidades"
-        className="mb-6 inline-flex items-center text-sm font-semibold text-green-700 hover:underline"
+        className="mb-6 inline-flex items-center text-sm font-semibold text-green-400 hover:text-green-300 hover:underline transition-colors"
       >
         ← Voltar para cidades
       </Link>
@@ -24,22 +24,22 @@ export const CityDetailsContent = ({ city }: CityDetailsContentProps) => {
       </section>
 
       <article className="max-w-none">
-        <h1 className="mb-2 text-4xl font-bold text-gray-900">{city.name}</h1>
-        <p className="mb-6 font-medium uppercase tracking-widest text-green-600">
+        <h1 className="mb-2 text-4xl font-bold text-white">{city.name}</h1>
+        <p className="mb-6 font-medium uppercase tracking-widest text-green-500">
           Região: {city.region?.name ?? 'Não informada'}
         </p>
-        {city.summary ? <p className="mb-4 text-lg text-gray-700">{city.summary}</p> : null}
-        <div className="text-lg leading-relaxed text-gray-700">{city.description}</div>
+        {city.summary ? <p className="mb-4 text-lg text-gray-300">{city.summary}</p> : null}
+        <div className="text-lg leading-relaxed text-gray-400">{city.description}</div>
       </article>
 
       {city.interestTags?.length ? (
         <section className="mt-10">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">Interesses</h2>
+          <h2 className="mb-4 text-xl font-semibold text-white">Interesses</h2>
           <div className="flex flex-wrap gap-3">
             {city.interestTags.map((tag) => (
               <span
                 key={tag.id}
-                className="rounded-full bg-green-100 px-4 py-2 text-sm font-medium text-green-800"
+                className="rounded-full bg-green-900/30 px-4 py-2 text-sm font-medium text-green-400 border border-green-800"
               >
                 {tag.name}
               </span>

@@ -2,7 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { PropsWithChildren } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { makeCity } from '../../../../test/fixtures';
+import { makeCity, makePaginatedResponse } from '../../../../test/fixtures';
 import { createTestQueryClient } from '../../../../test/utils';
 import { useCities } from '../useCities';
 import { useCity } from '../useCity';
@@ -25,7 +25,8 @@ describe('city queries', () => {
 
   it('loads the cities list through react query', async () => {
     const cities = [makeCity(), makeCity({ id: 2, slug: 'sao-jorge', name: 'Sao Jorge' })];
-    mockGetCities.mockResolvedValue(cities);
+    const response = makePaginatedResponse(cities);
+    mockGetCities.mockResolvedValue(response);
 
     const queryClient = createTestQueryClient();
     const wrapper = ({ children }: PropsWithChildren) => (
@@ -38,7 +39,7 @@ describe('city queries', () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.data).toEqual(cities);
+    expect(result.current.data).toEqual(response);
     expect(mockGetCities).toHaveBeenCalledTimes(1);
   });
 
@@ -76,4 +77,3 @@ describe('city queries', () => {
     expect(mockGetCityByIdOrSlug).not.toHaveBeenCalled();
   });
 });
-

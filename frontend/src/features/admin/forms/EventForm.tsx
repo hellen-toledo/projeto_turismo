@@ -8,7 +8,7 @@ import { TagMultiSelect } from '../../../shared/components/form/TagMultiSelect';
 import { TextInput } from '../../../shared/components/form/TextInput';
 import { TextareaField } from '../../../shared/components/form/TextareaField';
 import { ToggleField } from '../../../shared/components/form/ToggleField';
-import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
+import { getApiErrorMessage, getApiValidationErrors } from '../../../shared/lib/api/getApiErrorMessage';
 import { useAdminEventMutations } from '../hooks/useAdminEvents';
 import type { AdminFeedback, AdminOption, AdminValidationErrors, EventFormValues } from '../types/admin';
 import { createEmptyEventForm, mapEventToFormValues } from '../types/admin';
@@ -60,15 +60,25 @@ export const EventForm = ({ cityOptions, event, tagOptions }: EventFormProps) =>
         type: 'success',
         message: event ? 'Evento atualizado com sucesso.' : 'Evento criado com sucesso.',
       });
+      setErrors({});
 
       if (!event) {
         setValues(createEmptyEventForm());
       }
     } catch (error) {
-      setFeedback({
-        type: 'error',
-        message: getApiErrorMessage(error, 'Falha ao salvar o evento.'),
-      });
+      const apiValidationErrors = getApiValidationErrors(error);
+      if (Object.keys(apiValidationErrors).length > 0) {
+        setErrors(apiValidationErrors);
+        setFeedback({
+          type: 'error',
+          message: 'Há erros de validação retornados pelo servidor.',
+        });
+      } else {
+        setFeedback({
+          type: 'error',
+          message: getApiErrorMessage(error, 'Falha ao salvar o evento.'),
+        });
+      }
     }
   };
 

@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { City } from '../../../shared/types/api';
+import type { City, CityListParams } from '../../../shared/types/api';
 import { createAdminCity, deleteAdminCity, getAdminCities, updateAdminCity } from '../api/adminCitiesApi';
 import type { CityFormValues } from '../types/admin';
 
-export const useAdminCities = () =>
+export const useAdminCities = (params: CityListParams = {}) =>
   useQuery({
-    queryKey: ['admin', 'cities'],
-    queryFn: getAdminCities,
+    queryKey: ['admin', 'cities', params],
+    queryFn: () => getAdminCities(params),
   });
 
 export const useAdminCityMutations = () => {

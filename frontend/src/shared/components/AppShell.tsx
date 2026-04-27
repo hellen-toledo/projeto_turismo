@@ -1,10 +1,10 @@
-import { Outlet } from 'react-router-dom';
-import { Footer } from './Footer';
 import { Header } from './Header';
+import { Footer } from './Footer';
+import { Outlet } from 'react-router-dom';
 
 export const AppShell = () => {
   return (
-    <div className="flex min-h-screen flex-col bg-gray-50 font-sans text-gray-900">
+    <div className="flex min-h-screen flex-col bg-gray-950 font-sans text-gray-100">
       <Header />
 
       <main className="flex-grow pb-12 pt-24">

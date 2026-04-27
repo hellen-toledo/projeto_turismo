@@ -21,7 +21,7 @@ class CityController extends Controller
 {
     public function index(ListCitiesRequest $request, ListCitiesAction $listCities): AnonymousResourceCollection
     {
-        return CityResource::collection($listCities($request->validated()));
+        return CityResource::collection($listCities($request->validated(), false));
     }
 
     public function store(StoreCityRequest $request, CreateCityAction $createCity): Response
