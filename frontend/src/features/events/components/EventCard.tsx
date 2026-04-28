@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { Event } from '../../../shared/types/api';
 import { formatEventDate } from '../../../shared/lib/utils/formatEventDate';
 
@@ -64,9 +65,13 @@ export const EventCard = ({ event }: EventCardProps) => {
             Quero Conhecer
           </a>
         ) : (
-          <div className="w-full rounded-xl border border-gray-700 py-3 text-center font-bold text-gray-500 bg-gray-800/50">
-            Em breve
-          </div>
+          <Link
+            to={`/eventos/${event.slug || event.id}`}
+            className="block w-full rounded-xl border border-green-600 py-3 text-center font-bold text-green-500 transition-colors hover:bg-green-600 hover:text-white"
+            aria-label={`Abrir detalhes do evento ${event.title}`}
+          >
+            Ver detalhes
+          </Link>
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { PencilLine, Plus, Trash2 } from 'lucide-react';
+import { PencilLine, Plus, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { EmptyState } from '../../../shared/components/EmptyState';
@@ -7,11 +7,25 @@ import { LoadingState } from '../../../shared/components/LoadingState';
 import { PaginationControls } from '../../../shared/components/PaginationControls';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
+import { AdminDataTable, AdminKpi, AdminPage, AdminSearchToolbar, AdminSelectFilter, AdminStatusBadge, AdminSurface } from '../components/AdminUi';
+import { adminButtonClassName, adminInputClassName } from '../components/adminUiStyles';
 import { EventForm } from '../forms/EventForm';
 import { useAdminCities } from '../hooks/useAdminCities';
 import { getEventDisplayStatus, useAdminEvent, useAdminEventMutations, useAdminEvents } from '../hooks/useAdminEvents';
 import { useAdminInterestTags } from '../hooks/useAdminInterestTags';
 import { mapCitiesToOptions, mapTagsToOptions, type AdminFeedback } from '../types/admin';
+
+const publishedOptions = [
+  { label: 'Todos os status', value: '' },
+  { label: 'Publicados', value: '1' },
+  { label: 'Rascunhos', value: '0' },
+];
+
+const featuredOptions = [
+  { label: 'Todos os destaques', value: '' },
+  { label: 'Somente destaque', value: '1' },
+  { label: 'Sem destaque', value: '0' },
+];
 
 export const AdminEventsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -31,6 +45,8 @@ export const AdminEventsPage = () => {
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const events = eventsResponse?.data ?? [];
   const cities = citiesResponse?.data ?? [];
+  const featuredCount = events.filter((event) => event.isFeatured).length;
+  const publishedCount = events.filter((event) => event.isPublished).length;
 
   if (loadingEvents || loadingCities || loadingTags) {
     return <LoadingState label="Carregando base administrativa de eventos..." />;
@@ -39,8 +55,8 @@ export const AdminEventsPage = () => {
   if (eventsError || citiesError || tagsError) {
     return (
       <ErrorState
-        title="Não foi possível carregar o módulo de eventos"
         description="Verifique a autenticação administrativa e a disponibilidade da API."
+        title="Não foi possível carregar o módulo de eventos"
       />
     );
   }
@@ -71,136 +87,114 @@ export const AdminEventsPage = () => {
   };
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-      <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-lg shadow-slate-200/60">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.26em] text-emerald-700">Eventos</p>
-            <h1 className="mt-2 text-3xl font-black text-slate-900">Formulário base</h1>
-            <p className="mt-2 text-sm text-slate-500">Fluxo inicial para criação, edição e curadoria.</p>
-          </div>
-          <button
-            className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
-            onClick={() => {
-              setSelectedEventId(null);
-              setFeedback(null);
-            }}
-            type="button"
-          >
-            <Plus className="h-4 w-4" />
-            Novo evento
-          </button>
-        </div>
-
-        <div className="mt-6">
-          <FormAlert feedback={feedback} />
-        </div>
-
-        <div className="mt-6">
-          <EventForm
-            cityOptions={mapCitiesToOptions(cities)}
-            event={selectedEvent}
-            isLoadingEvent={loadingSelectedEvent}
-            key={selectedEvent?.id ?? 'new-event'}
-            tagOptions={mapTagsToOptions(tags)}
-          />
-        </div>
+    <AdminPage
+      actions={
+        <button
+          className={adminButtonClassName.primary}
+          onClick={() => {
+            setSelectedEventId(null);
+            setFeedback(null);
+          }}
+          type="button"
+        >
+          <Plus className="h-4 w-4" />
+          Novo evento
+        </button>
+      }
+      description="Cadastre, revise e destaque eventos turísticos usando a mesma base de dados e formulários já existentes no projeto."
+      eyebrow="Gestão de eventos"
+      title="Eventos turísticos"
+    >
+      <section className="grid gap-4 md:grid-cols-3">
+        <AdminKpi hint="Total exibido na consulta atual." icon={<Star className="h-5 w-5" />} label="Eventos carregados" value={eventsResponse?.meta.total ?? 0} />
+        <AdminKpi hint="Registros em destaque na listagem atual." icon={<PencilLine className="h-5 w-5" />} label="Com destaque" value={featuredCount} />
+        <AdminKpi hint="Publicações ativas neste recorte." icon={<Plus className="h-5 w-5" />} label="Publicados" value={publishedCount} />
       </section>
 
-      <section className="rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-lg shadow-slate-200/60">
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.26em] text-emerald-700">Lista</p>
-            <h2 className="mt-2 text-3xl font-black text-slate-900">Eventos cadastrados</h2>
-          </div>
-          <p className="text-sm text-slate-500">{eventsResponse?.meta.total ?? 0} itens</p>
-        </div>
-
-        <form
-          className="mt-6 grid gap-3 md:grid-cols-[2fr_1fr_1fr_auto]"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const formData = new FormData(event.currentTarget);
-            const next = new URLSearchParams(searchParams);
-            const q = String(formData.get('q') || '').trim();
-            const published = String(formData.get('published') || '');
-            const featured = String(formData.get('featured') || '');
-
-            if (q) {
-              next.set('q', q);
-            } else {
-              next.delete('q');
-            }
-
-            if (published) {
-              next.set('published', published);
-            } else {
-              next.delete('published');
-            }
-
-            if (featured) {
-              next.set('featured', featured);
-            } else {
-              next.delete('featured');
-            }
-
-            next.set('page', '1');
-            setSearchParams(next);
-          }}
+      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <AdminSurface
+          description="Fluxo real de criação, edição e curadoria da agenda."
+          meta={selectedEvent ? 'Edição ativa' : 'Novo cadastro'}
+          title="Novo evento"
         >
-          <input
-            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
-            defaultValue={filters.search ?? ''}
-            name="q"
-            placeholder="Buscar evento ou descrição"
-            type="text"
-          />
-          <select
-            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
-            defaultValue={searchParams.get('published') ?? ''}
-            name="published"
-          >
-            <option value="">Todos os status</option>
-            <option value="1">Publicados</option>
-            <option value="0">Rascunhos</option>
-          </select>
-          <select
-            className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
-            defaultValue={searchParams.get('featured') ?? ''}
-            name="featured"
-          >
-            <option value="">Todos os destaques</option>
-            <option value="1">Somente destaque</option>
-            <option value="0">Sem destaque</option>
-          </select>
-          <button className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white" type="submit">
-            Aplicar
-          </button>
-        </form>
+          <FormAlert feedback={feedback} />
 
-        <div className="mt-6 space-y-4">
-          {events?.length ? (
-            events.map((event) => (
-              <article key={event.id} className="rounded-3xl border border-slate-100 bg-slate-50 p-5">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900">{event.title}</h3>
-                    <p className="mt-1 text-sm text-slate-500">{event.city?.name ?? 'Sem cidade'} • {new Date(event.startsAt).toLocaleString('pt-BR')}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {getEventDisplayStatus(event).map((status) => (
-                      <span key={`${event.id}-${status}`} className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
-                        {status}
-                      </span>
-                    ))}
-                  </div>
+          <div className="mt-6">
+            <EventForm
+              cityOptions={mapCitiesToOptions(cities)}
+              event={selectedEvent}
+              isLoadingEvent={loadingSelectedEvent}
+              key={selectedEvent?.id ?? 'new-event'}
+              tagOptions={mapTagsToOptions(tags)}
+            />
+          </div>
+        </AdminSurface>
+
+        <AdminSurface
+          description="Filtre a agenda, revise os estados de publicação e abra um item para edição."
+          meta={`${eventsResponse?.meta.total ?? 0} itens`}
+          title="Listagem de eventos"
+        >
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              const formData = new FormData(event.currentTarget);
+              const next = new URLSearchParams(searchParams);
+              const q = String(formData.get('q') || '').trim();
+              const published = String(formData.get('published') || '');
+              const featured = String(formData.get('featured') || '');
+
+              if (q) {
+                next.set('q', q);
+              } else {
+                next.delete('q');
+              }
+
+              if (published) {
+                next.set('published', published);
+              } else {
+                next.delete('published');
+              }
+
+              if (featured) {
+                next.set('featured', featured);
+              } else {
+                next.delete('featured');
+              }
+
+              next.set('page', '1');
+              setSearchParams(next);
+            }}
+          >
+            <AdminSearchToolbar
+              filterInput={
+                <div className="flex flex-wrap gap-2">
+                  <AdminSelectFilter defaultValue={searchParams.get('published') ?? ''} name="published" options={publishedOptions} />
+                  <AdminSelectFilter defaultValue={searchParams.get('featured') ?? ''} name="featured" options={featuredOptions} />
+                  <button className={adminButtonClassName.primary} type="submit">
+                    Aplicar
+                  </button>
                 </div>
+              }
+              searchInput={
+                <input
+                  className={`${adminInputClassName} pl-10`}
+                  defaultValue={filters.search ?? ''}
+                  name="q"
+                  placeholder="Buscar por título, cidade ou descrição..."
+                  type="text"
+                />
+              }
+            />
+          </form>
 
-                <p className="mt-4 line-clamp-3 text-sm text-slate-600">{event.description}</p>
-
-                <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-6">
+            <AdminDataTable
+              actions={(event) => (
+                <div className="flex justify-end gap-2">
                   <button
-                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
+                    className={adminButtonClassName.secondary}
                     onClick={() => {
                       setSelectedEventId(event.id);
                       setFeedback(null);
@@ -211,7 +205,7 @@ export const AdminEventsPage = () => {
                     Editar
                   </button>
                   <button
-                    className="inline-flex items-center gap-2 rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-60"
+                    className={adminButtonClassName.danger}
                     disabled={deleting}
                     onClick={() => {
                       void handleDelete(event.id);
@@ -222,26 +216,62 @@ export const AdminEventsPage = () => {
                     Excluir
                   </button>
                 </div>
-              </article>
-            ))
-          ) : (
-            <EmptyState
-              title="Nenhum evento cadastrado"
-              description="Use o formulário ao lado para iniciar a base operacional da agenda."
+              )}
+              columns={[
+                {
+                  key: 'title',
+                  label: 'Evento',
+                  render: (event) => (
+                    <div>
+                      <p className="font-semibold text-slate-950">{event.title}</p>
+                      <p className="mt-1 text-xs text-slate-500">{event.city?.name ?? 'Sem cidade'}</p>
+                    </div>
+                  ),
+                },
+                {
+                  key: 'startsAt',
+                  label: 'Data',
+                  render: (event) => new Date(event.startsAt).toLocaleString('pt-BR'),
+                },
+                {
+                  key: 'featured',
+                  label: 'Destaque',
+                  render: (event) => (event.isFeatured ? 'Sim' : 'Não'),
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: (event) => (
+                    <div className="flex flex-wrap gap-2">
+                      {getEventDisplayStatus(event).map((status) => (
+                        <AdminStatusBadge key={`${event.id}-${status}`} status={status} />
+                      ))}
+                    </div>
+                  ),
+                },
+              ]}
+              emptyState={
+                <EmptyState
+                  description="Ajuste os filtros ou cadastre um novo evento para exibição no painel."
+                  title="Nenhum evento encontrado"
+                />
+              }
+              getRowKey={(event) => event.id}
+              rows={events}
             />
-          )}
-        </div>
+          </div>
 
-        <PaginationControls
-          currentPage={eventsResponse?.meta.currentPage ?? 1}
-          lastPage={eventsResponse?.meta.lastPage ?? 1}
-          onPageChange={(page) => {
-            const next = new URLSearchParams(searchParams);
-            next.set('page', String(page));
-            setSearchParams(next);
-          }}
-        />
-      </section>
-    </div>
+          <PaginationControls
+            currentPage={eventsResponse?.meta.currentPage ?? 1}
+            lastPage={eventsResponse?.meta.lastPage ?? 1}
+            onPageChange={(page) => {
+              const next = new URLSearchParams(searchParams);
+              next.set('page', String(page));
+              setSearchParams(next);
+            }}
+          />
+        </AdminSurface>
+      </div>
+    </AdminPage>
   );
 };

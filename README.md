@@ -43,6 +43,8 @@ npm install
 npm run dev
 ```
 
+O frontend local sobe em `http://127.0.0.1:4173`.
+
 ### Variável principal do frontend
 
 ```dotenv

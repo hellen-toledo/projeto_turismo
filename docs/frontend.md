@@ -42,12 +42,9 @@ Definidas em [frontend/src/app/routes.tsx](/home/hellen/projeto_turismo/frontend
 - `/cidades`
 - `/cidades/:idOrSlug`
 - `/eventos`
+- `/eventos/:idOrSlug`
 - `/guia`
 - `/contato`
-
-Observação:
-
-- ainda não existe uma página pública própria para detalhe de evento
 
 ## Rotas administrativas
 
@@ -118,6 +115,7 @@ Leitura, cache e invalidação ficam em hooks como:
 - `useCities`
 - `useCity`
 - `useEvents`
+- `useEvent`
 
 ## Gerenciamento de sessão admin
 

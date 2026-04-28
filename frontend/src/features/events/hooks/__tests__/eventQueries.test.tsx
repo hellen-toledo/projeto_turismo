@@ -4,20 +4,22 @@ import type { PropsWithChildren } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { makeEvent, makePaginatedResponse } from '../../../../test/fixtures';
 import { createTestQueryClient } from '../../../../test/utils';
-import { useEvents } from '../useEvents';
+import { useEvent, useEvents } from '../useEvents';
 
-const { mockGetEvents } = vi.hoisted(() => ({
+const { mockGetEventByIdOrSlug, mockGetEvents } = vi.hoisted(() => ({
+  mockGetEventByIdOrSlug: vi.fn(),
   mockGetEvents: vi.fn(),
 }));
 
 vi.mock('../../api/eventsApi', () => ({
   getEvents: mockGetEvents,
-  getEventByIdOrSlug: vi.fn(),
+  getEventByIdOrSlug: mockGetEventByIdOrSlug,
 }));
 
 describe('event queries', () => {
   beforeEach(() => {
     mockGetEvents.mockReset();
+    mockGetEventByIdOrSlug.mockReset();
   });
 
   it('loads the events list through react query', async () => {
@@ -38,5 +40,24 @@ describe('event queries', () => {
 
     expect(result.current.data).toEqual(response);
     expect(mockGetEvents).toHaveBeenCalledTimes(1);
+  });
+
+  it('loads an event detail through react query', async () => {
+    const event = makeEvent({ slug: 'festival-do-lago' });
+    mockGetEventByIdOrSlug.mockResolvedValue(event);
+
+    const queryClient = createTestQueryClient();
+    const wrapper = ({ children }: PropsWithChildren) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+
+    const { result } = renderHook(() => useEvent('festival-do-lago'), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(result.current.data).toEqual(event);
+    expect(mockGetEventByIdOrSlug).toHaveBeenCalledWith('festival-do-lago');
   });
 });

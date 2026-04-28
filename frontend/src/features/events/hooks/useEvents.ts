@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import type { EventListParams } from '../../../shared/types/api';
-import { getEvents } from '../api/eventsApi';
+import { getEventByIdOrSlug, getEvents } from '../api/eventsApi';
 
 export const useEvents = (params: EventListParams = {}) => {
   return useQuery({
@@ -8,3 +8,10 @@ export const useEvents = (params: EventListParams = {}) => {
     queryFn: () => getEvents(params),
   });
 };
+
+export const useEvent = (idOrSlug: string) =>
+  useQuery({
+    queryKey: ['event', idOrSlug],
+    queryFn: () => getEventByIdOrSlug(idOrSlug),
+    enabled: idOrSlug.length > 0,
+  });

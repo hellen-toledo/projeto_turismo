@@ -65,14 +65,14 @@ npm install
 npm run dev
 ```
 
-A interface web levantará localmente de forma hot-reloaded na URL padronizada (usualmente `http://localhost:5173`).
+A interface web levantará localmente em `http://127.0.0.1:4173`.
 
 ## Scripts Disponíveis
 
 Dentro deste diretório, o arquivo `package.json` provê as seguintes abstrações:
-- **`npm run dev`**: Levanta o servidor Vite.
+- **`npm run dev`**: Levanta o servidor Vite em `127.0.0.1:4173`.
 - **`npm run build`**: Faz a checagem de tipos e transpilação em `tsc` seguida do build real empacotado para produção (`vite build`).
-- **`npm run preview`**: Para subir localmente os arquivos gerados pela pasta `/dist`.
+- **`npm run preview`**: Sobe localmente os arquivos gerados pela pasta `/dist` em `127.0.0.1:4173`.
 - **`npm run lint`**: Roda as configurações rígidas do ESLint.
 - **`npm run test`**: Invoca a suíte de testes implementada com Vitest uma única vez.
 - **`npm run test:watch`**: Aciona os testes do Vitest em modo watch contínuo.

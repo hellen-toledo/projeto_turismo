@@ -10,6 +10,7 @@ import { AdminMediaPage } from '../features/admin/pages/AdminMediaPage';
 import { AdminRegionsPage } from '../features/admin/pages/AdminRegionsPage';
 import { CityDetailsPage } from '../pages/CityDetailsPage';
 import { CitiesPage } from '../pages/CitiesPage';
+import { EventDetailsPage } from '../pages/EventDetailsPage';
 import { EventsPage } from '../pages/EventsPage';
 import { HomePage } from '../pages/HomePage';
 import { NotFoundPage } from '../pages/NotFoundPage';
@@ -37,6 +38,10 @@ export const router = createBrowserRouter([
       {
         path: 'eventos',
         element: <EventsPage />,
+      },
+      {
+        path: 'eventos/:idOrSlug',
+        element: <EventDetailsPage />,
       },
       {
         path: 'guia',

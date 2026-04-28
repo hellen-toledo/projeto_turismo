@@ -55,7 +55,7 @@ describe('EventsPage', () => {
       createQueryState({
         data: makePaginatedResponse([
           makeEvent({ id: 1, title: 'Festival do Lago', coverImage: 'https://example.com/festival.jpg' }),
-          makeEvent({ id: 2, title: 'Feira do Cerrado', slug: 'feira-do-cerrado' }),
+          makeEvent({ id: 2, title: 'Feira do Cerrado', slug: 'feira-do-cerrado', externalUrl: null }),
         ]),
       }),
     );
@@ -66,10 +66,11 @@ describe('EventsPage', () => {
     expect(screen.getByText('Festival do Lago')).toBeInTheDocument();
     expect(screen.getByText('Feira do Cerrado')).toBeInTheDocument();
     expect(screen.getByAltText('Imagem do evento Festival do Lago')).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: /Abrir detalhes externos do evento/i })).toHaveLength(2);
+    expect(screen.getByRole('link', { name: /Abrir detalhes externos do evento Festival do Lago/i })).toHaveAttribute('href', 'https://turismo.go.gov.br/festival-do-lago');
+    expect(screen.getByRole('link', { name: /Abrir detalhes do evento Feira do Cerrado/i })).toHaveAttribute('href', '/eventos/feira-do-cerrado');
   });
 
-  it('does not render the external CTA for placeholder example domains', () => {
+  it('uses the internal details route when there is no usable external url', () => {
     mockUseEvents.mockReturnValue(
       createQueryState({
         data: makePaginatedResponse([
@@ -82,6 +83,6 @@ describe('EventsPage', () => {
 
     expect(screen.getByText('Festival Placeholder')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Abrir detalhes externos do evento/i })).not.toBeInTheDocument();
-    expect(screen.getByText('Em breve')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Abrir detalhes do evento Festival Placeholder/i })).toHaveAttribute('href', '/eventos/festival-do-lago');
   });
 });

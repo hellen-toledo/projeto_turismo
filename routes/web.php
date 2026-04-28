@@ -8,6 +8,6 @@ Route::get('/', function () {
         'layer' => 'backend-api',
         'status' => 'ok',
         'documentation' => 'docs/architecture.md',
-        'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+        'frontend_url' => env('FRONTEND_URL', 'http://127.0.0.1:4173'),
     ]);
 });

@@ -1,73 +1,172 @@
-import { ArrowRight, CalendarRange, Images, MapPinned, Shield } from 'lucide-react';
+import { CalendarRange, CheckCheck, Clock3, Images, MapPinned, Shapes, Shield, Sparkles, Waypoints } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { ErrorState } from '../../../shared/components/ErrorState';
+import { AdminDataTable, AdminKpi, AdminPage, AdminStatusBadge, AdminSurface } from '../components/AdminUi';
+import { adminButtonClassName } from '../components/adminUiStyles';
+import { useAdminCities } from '../hooks/useAdminCities';
+import { useAdminEvents } from '../hooks/useAdminEvents';
+import { useAdminInterestTags } from '../hooks/useAdminInterestTags';
+import { useAdminRegions } from '../hooks/useAdminRegions';
 
-const cards = [
-  {
-    to: '/admin/cities',
-    title: 'Cidades',
-    description: 'Cadastre, publique e mantenha a taxonomia regional das cidades.',
-    icon: MapPinned,
-  },
-  {
-    to: '/admin/events',
-    title: 'Eventos',
-    description: 'Gerencie agenda, destaque editorial e vínculo com cidades/tags.',
-    icon: CalendarRange,
-  },
-  {
-    to: '/admin/media',
-    title: 'Mídia',
-    description: 'Centralize upload, preview, remoção e reutilização de imagens administrativas.',
-    icon: Images,
-  },
+const checklistItems = [
+  'Validar data, local e responsável pelo evento.',
+  'Conferir cidade, região e taxonomia aplicada.',
+  'Selecionar imagem de capa em boa resolução.',
+  'Revisar descrição, links e informações úteis.',
 ];
 
 export const AdminHomePage = () => {
+  const { data: eventsResponse, isLoading: loadingEvents, isError: eventsError } = useAdminEvents({ perPage: 6 });
+  const { data: featuredEventsResponse, isLoading: loadingFeatured, isError: featuredError } = useAdminEvents({ perPage: 3, featured: true });
+  const { data: citiesResponse, isLoading: loadingCities, isError: citiesError } = useAdminCities({ perPage: 1 });
+  const { data: regions, isLoading: loadingRegions, isError: regionsError } = useAdminRegions();
+  const { data: tags, isLoading: loadingTags, isError: tagsError } = useAdminInterestTags();
+
+  if (eventsError && featuredError && citiesError && regionsError && tagsError) {
+    return (
+      <ErrorState
+        description="Verifique a autenticação administrativa, o backend e a disponibilidade da API."
+        title="Não foi possível carregar a visão geral"
+      />
+    );
+  }
+
+  const events = eventsResponse?.data ?? [];
+  const featuredEvents = featuredEventsResponse?.data ?? [];
+  const totalEvents = eventsResponse?.meta.total ?? 0;
+  const totalCities = citiesResponse?.meta.total ?? 0;
+  const totalRegions = regions?.length ?? 0;
+  const totalTags = tags?.length ?? 0;
+  const publishedEvents = events.filter((event) => event.isPublished).length;
+  const highlightedEvents = featuredEvents.length;
+  const isStillLoadingAny = loadingEvents || loadingFeatured || loadingCities || loadingRegions || loadingTags;
+
   return (
-    <div className="space-y-6">
-      <section className="rounded-[32px] bg-slate-950 px-8 py-10 text-white shadow-2xl shadow-slate-300/30">
-        <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">Visão Geral</p>
-          <h1 className="mt-4 text-4xl font-black">Frontend administrativo preparado para crescer em camadas.</h1>
-          <p className="mt-4 text-base text-slate-300">
-            Esta base já separa autenticação, guardas de rota, serviços CRUD, formulários reaproveitáveis e feedback operacional. O próximo passo pode ser dashboard, permissões finas ou upload real sem retrabalho estrutural.
-          </p>
+    <AdminPage
+      actions={
+        <>
+          <Link className={adminButtonClassName.secondary} to="/admin/cities">
+            Abrir cidades
+          </Link>
+          <Link className={adminButtonClassName.primary} to="/admin/events">
+            Novo fluxo de agenda
+          </Link>
+        </>
+      }
+      description="Acompanhe publicações, organize cidades e regiões e mantenha a vitrine turística sempre atualizada sem sair da área administrativa."
+      eyebrow="Administração turística"
+      title="Painel do Turismo Norte-Goiano"
+    >
+      {isStillLoadingAny ? (
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Parte dos dados ainda está carregando. Se isso persistir, verifique se a API administrativa está respondendo.
         </div>
+      ) : null}
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <AdminKpi hint={`${publishedEvents} publicados entre os registros carregados agora.`} icon={<CalendarRange className="h-5 w-5" />} label="Eventos cadastrados" value={totalEvents} />
+        <AdminKpi hint="Municípios disponíveis no catálogo administrativo." icon={<MapPinned className="h-5 w-5" />} label="Cidades mapeadas" value={totalCities} />
+        <AdminKpi hint="Rotas, regiões e agrupamentos territoriais ativos." icon={<Waypoints className="h-5 w-5" />} label="Regiões ativas" value={totalRegions} />
+        <AdminKpi hint="Vocabulário editorial disponível para classificação." icon={<Shapes className="h-5 w-5" />} label="Tags cadastradas" value={totalTags} />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-3">
-        {cards.map((card) => {
-          const Icon = card.icon;
-
-          return (
-            <Link
-              key={card.to}
-              className="group rounded-[28px] border border-white/70 bg-white/80 p-6 shadow-lg shadow-slate-200/60 transition-transform hover:-translate-y-1"
-              to={card.to}
-            >
-              <Icon className="h-6 w-6 text-emerald-600" />
-              <h2 className="mt-6 text-2xl font-black text-slate-900">{card.title}</h2>
-              <p className="mt-3 text-sm text-slate-500">{card.description}</p>
-              <span className="mt-8 inline-flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                Abrir módulo
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </span>
+      <div className="grid gap-5 xl:grid-cols-3">
+        <AdminSurface
+          actions={
+            <Link className={adminButtonClassName.secondary} to="/admin/events">
+              Ver agenda
             </Link>
-          );
-        })}
-      </section>
+          }
+          description="Conteúdos que aparecem com prioridade e merecem revisão frequente."
+          title="Eventos em destaque"
+        >
+          <AdminDataTable
+            columns={[
+              {
+                key: 'title',
+                label: 'Evento',
+                render: (event) => (
+                  <div>
+                    <p className="font-semibold text-slate-950">{event.title}</p>
+                    <p className="mt-1 text-xs text-slate-500">{event.city?.name ?? 'Sem cidade'}</p>
+                  </div>
+                ),
+              },
+              {
+                key: 'startsAt',
+                label: 'Data',
+                render: (event) => new Date(event.startsAt).toLocaleDateString('pt-BR'),
+              },
+              {
+                key: 'status',
+                label: 'Status',
+                render: (event) => <AdminStatusBadge status={event.isPublished ? 'Publicado' : 'Rascunho'} />,
+              },
+            ]}
+            emptyState={
+              <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+                <p className="text-base font-semibold text-slate-950">Nenhum evento em destaque</p>
+                <p className="mt-2 text-sm text-slate-500">Marque eventos como destaque para que apareçam nesta seção.</p>
+              </div>
+            }
+            getRowKey={(event) => event.id}
+            rows={highlightedEvents ? featuredEvents : events.slice(0, 3)}
+          />
+        </AdminSurface>
 
-      <section className="rounded-[28px] border border-emerald-100 bg-emerald-50/70 p-6">
-        <div className="flex items-start gap-4">
-          <Shield className="mt-1 h-5 w-5 text-emerald-700" />
-          <div>
-            <h2 className="text-lg font-black text-slate-900">O que já está pronto</h2>
-            <p className="mt-2 text-sm text-slate-600">
-              Sessão persistida, proteção de rota, consulta de sessão atual, listagens simples, criação, edição e remoção de cidades e eventos com dependências auxiliares de regiões e tags.
-            </p>
+        <section className="rounded-3xl border border-slate-950 bg-slate-950 p-5 text-white shadow-sm xl:col-span-1">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-white/10 p-3">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold">Checklist editorial</h2>
+              <p className="text-sm text-slate-300">Antes de publicar novos conteúdos.</p>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-4">
+            {checklistItems.map((item) => (
+              <div key={item} className="flex gap-3">
+                <CheckCheck className="mt-0.5 h-5 w-5 flex-none text-emerald-300" />
+                <p className="text-sm leading-6 text-slate-200">{item}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="grid gap-5 lg:grid-cols-3">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700 w-fit">
+            <Images className="h-5 w-5" />
+          </div>
+          <h2 className="mt-4 text-lg font-semibold text-slate-950">Biblioteca visual</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Centralize capas, galerias e mídia reutilizável para manter consistência visual na operação editorial.</p>
+          <Link className="mt-5 inline-flex text-sm font-semibold text-emerald-700" to="/admin/media">
+            Abrir mídia
+          </Link>
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700 w-fit">
+            <Clock3 className="h-5 w-5" />
+          </div>
+          <h2 className="mt-4 text-lg font-semibold text-slate-950">Curadoria contínua</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-500">Use cidades, eventos, regiões e tags no mesmo fluxo para reduzir retrabalho e manter contexto entre módulos.</p>
+          <Link className="mt-5 inline-flex text-sm font-semibold text-emerald-700" to="/admin/events">
+            Revisar agenda
+          </Link>
+        </div>
+        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/80 p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <Shield className="mt-0.5 h-5 w-5 text-emerald-700" />
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">Base pronta para crescer</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">O visual foi aproximado da referência sem quebrar a separação atual por rotas, hooks, actions e formulários reais do projeto.</p>
+            </div>
           </div>
         </div>
-      </section>
-    </div>
+      </div>
+    </AdminPage>
   );
 };

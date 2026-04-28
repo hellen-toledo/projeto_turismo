@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { clearAdminSession, getAdminAccessToken } from '../auth/adminSession';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL, API_TIMEOUT_MS } from './config';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
+  timeout: API_TIMEOUT_MS,
 });
 
 const isAdminApiRequest = (url?: string) => {
