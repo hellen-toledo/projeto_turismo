@@ -2,20 +2,20 @@
 
 Documentação da API administrativa ativa em `/api/v1/admin`.
 
-## Base e autenticação
+## Autenticação
 
-Base oficial:
+O painel atual usa Laravel Sanctum com token Bearer.
 
-- `/api/v1/admin`
+Fluxo:
 
-Autenticação:
+1. `POST /api/v1/admin/auth/login`
+2. usar `Authorization: Bearer <token>` nas chamadas seguintes
+3. `GET /api/v1/admin/auth/me` para validar sessão
+4. `POST /api/v1/admin/auth/logout` para invalidar o token atual
 
-- Laravel Sanctum
-- token Bearer para o painel administrativo atual
+### Login
 
-Login:
-
-- `POST /api/v1/admin/auth/login`
+`POST /api/v1/admin/auth/login`
 
 Payload:
 
@@ -23,11 +23,11 @@ Payload:
 {
   "email": "admin@example.com",
   "password": "password",
-  "deviceName": "local-dev"
+  "deviceName": "frontend-admin"
 }
 ```
 
-Resposta:
+Resposta esperada:
 
 ```json
 {
@@ -42,35 +42,34 @@ Resposta:
 }
 ```
 
-Sessão atual:
+### Sessão atual
 
-- `GET /api/v1/admin/auth/me`
-- `POST /api/v1/admin/auth/logout`
+`GET /api/v1/admin/auth/me`
 
-## Proteção e segurança
+Resposta esperada:
 
-Todas as rotas administrativas ativas usam:
+```json
+{
+  "id": 1,
+  "name": "Admin User",
+  "email": "admin@example.com",
+  "isAdmin": true
+}
+```
 
-- `auth:sanctum`
-- `can:access-admin`
-- policies por recurso (`City`, `Event`, `Region`, `InterestTag`, `MediaAsset`)
+### Logout
 
-Somente usuários com `is_admin = true` podem gerenciar conteúdo.
+`POST /api/v1/admin/auth/logout`
 
-Respostas relevantes:
+Resposta esperada:
 
-- `401 Unauthenticated`
-- `403 Forbidden`
-- `409 Conflict`
-- `422 Validation error`
+```json
+{
+  "message": "Logged out successfully."
+}
+```
 
-Conflitos de integridade atuais:
-
-- região com cidades vinculadas não pode ser excluída
-- cidade com eventos vinculados não pode ser excluída
-- mídia vinculada a cidade ou evento não pode ser excluída
-
-## Endpoints ativos
+## Endpoints administrativos
 
 ### Auth
 
@@ -83,8 +82,7 @@ Conflitos de integridade atuais:
 - `GET /api/v1/admin/cities`
 - `POST /api/v1/admin/cities`
 - `GET /api/v1/admin/cities/{city}`
-- `PATCH /api/v1/admin/cities/{city}`
-- `PUT /api/v1/admin/cities/{city}`
+- `PUT|PATCH /api/v1/admin/cities/{city}`
 - `DELETE /api/v1/admin/cities/{city}`
 
 ### Events
@@ -92,24 +90,21 @@ Conflitos de integridade atuais:
 - `GET /api/v1/admin/events`
 - `POST /api/v1/admin/events`
 - `GET /api/v1/admin/events/{event}`
-- `PATCH /api/v1/admin/events/{event}`
-- `PUT /api/v1/admin/events/{event}`
+- `PUT|PATCH /api/v1/admin/events/{event}`
 - `DELETE /api/v1/admin/events/{event}`
 
 ### Regions
 
 - `GET /api/v1/admin/regions`
 - `POST /api/v1/admin/regions`
-- `PATCH /api/v1/admin/regions/{region}`
-- `PUT /api/v1/admin/regions/{region}`
+- `PUT|PATCH /api/v1/admin/regions/{region}`
 - `DELETE /api/v1/admin/regions/{region}`
 
 ### Interest Tags
 
 - `GET /api/v1/admin/interest-tags`
 - `POST /api/v1/admin/interest-tags`
-- `PATCH /api/v1/admin/interest-tags/{interestTag}`
-- `PUT /api/v1/admin/interest-tags/{interestTag}`
+- `PUT|PATCH /api/v1/admin/interest-tags/{interestTag}`
 - `DELETE /api/v1/admin/interest-tags/{interestTag}`
 
 ### Media
@@ -141,42 +136,10 @@ Conflitos de integridade atuais:
 }
 ```
 
-`slug` é opcional.
+Notas:
 
-### Upload de mídia
-
-`POST /api/v1/admin/media`
-
-`multipart/form-data`
-
-Campos:
-
-- `file` obrigatório
-- `collection` opcional: `cover`, `gallery`, `general`
-- `altText` opcional
-
-Regras:
-
-- apenas imagens
-- tipos permitidos: `jpg`, `jpeg`, `png`, `webp`
-- limite: 5 MB
-- armazenamento em `public/tourism/media/YYYY/MM`
-
-Resposta:
-
-```json
-{
-  "id": 10,
-  "url": "/storage/tourism/media/2026/04/capa.jpg",
-  "path": "tourism/media/2026/04/capa.jpg",
-  "originalName": "capa.jpg",
-  "mimeType": "image/jpeg",
-  "size": 183204,
-  "collection": "cover",
-  "altText": "Vista principal",
-  "createdAt": "2026-04-27T03:00:00+00:00"
-}
-```
+- `slug` é opcional
+- se omitido, o backend gera slug a partir do nome
 
 ### Criar cidade
 
@@ -212,12 +175,6 @@ Resposta:
 }
 ```
 
-Notas:
-
-- `coverImage` continua aceitando URL pública
-- `gallery` referencia `mediaAssetId`
-- apenas uma imagem de galeria pode ser `isCover = true`
-
 ### Criar evento
 
 `POST /api/v1/admin/events`
@@ -246,29 +203,141 @@ Notas:
 }
 ```
 
-## Fluxo de upload
+### Upload de mídia
 
-1. O painel envia o arquivo para `POST /api/v1/admin/media`
-2. A API salva o binário no disk `public`
-3. A API persiste `MediaAsset`
-4. O frontend recebe `id`, `url` e metadados
-5. O formulário de cidade ou evento referencia o `mediaAssetId` na galeria
+`POST /api/v1/admin/media`
 
-## Regras de leitura pública relacionadas
+`multipart/form-data`
 
-- `CityResource` e `EventResource` mantêm `coverImage` por compatibilidade
-- se `coverImage` estiver vazio e houver item de galeria marcado como capa, a API pública usa a URL da mídia marcada com `isCover = true`
-- atrações não publicadas não saem no detalhe público da cidade
+Campos:
 
-## Limitações conhecidas
+- `file` obrigatório
+- `collection` opcional: `cover`, `gallery`, `general`
+- `altText` opcional
 
-- o frontend público ainda não possui página própria de detalhe do evento
-- tags de interesse não retornam contadores de uso na API atual
-- os aliases legados comentados em `routes/api.php` não fazem parte da API ativa e não devem ser documentados como disponíveis
+Regras:
 
-## Dados de seed
+- apenas imagens
+- extensões permitidas: `jpg`, `jpeg`, `png`, `webp`
+- tamanho máximo: `5 MB`
 
-O `DatabaseSeeder` cria:
+Resposta esperada:
+
+```json
+{
+  "id": 10,
+  "url": "/storage/tourism/media/2026/04/capa.jpg",
+  "path": "tourism/media/2026/04/capa.jpg",
+  "originalName": "capa.jpg",
+  "mimeType": "image/jpeg",
+  "size": 183204,
+  "collection": "cover",
+  "altText": "Vista principal",
+  "createdAt": "2026-04-27T03:00:00+00:00"
+}
+```
+
+## Respostas esperadas
+
+### Cidade criada
+
+Exemplo resumido:
+
+```json
+{
+  "id": 1,
+  "name": "Alto Paraíso de Goiás",
+  "slug": "alto-paraiso-de-goias",
+  "summary": "Base da Chapada.",
+  "description": "Destino com trilhas e cachoeiras.",
+  "coverImage": "https://example.com/capa.jpg",
+  "isPublished": true,
+  "region": {
+    "id": 1,
+    "name": "Chapada dos Veadeiros"
+  }
+}
+```
+
+### Listagens paginadas
+
+Endpoints como `cities`, `events` e `media` retornam:
+
+```json
+{
+  "data": [],
+  "meta": {
+    "current_page": 1,
+    "last_page": 1,
+    "per_page": 15,
+    "total": 0
+  }
+}
+```
+
+## Erros comuns
+
+### `401 Unauthenticated`
+
+- token ausente
+- token expirado/removido
+
+Resposta:
+
+```json
+{
+  "message": "Unauthenticated."
+}
+```
+
+### `403 Forbidden`
+
+- usuário autenticado sem `is_admin = true`
+- policy negou a ação
+
+Resposta:
+
+```json
+{
+  "message": "Forbidden."
+}
+```
+
+### `409 Conflict`
+
+Casos atuais:
+
+- região com cidades vinculadas
+- cidade com eventos vinculados
+- mídia vinculada a cidade ou evento
+
+### `422 Validation error`
+
+Formato:
+
+```json
+{
+  "message": "The given data was invalid.",
+  "errors": {
+    "fieldName": [
+      "Mensagem de validação"
+    ]
+  }
+}
+```
+
+Exemplos:
+
+- `regionId` inexistente
+- `cityId` inexistente
+- `endsAt` anterior a `startsAt`
+- `collection` inválida
+- upload com arquivo não suportado
+- mais de uma imagem marcada como capa na galeria
+
+## Seed local
+
+Credenciais padrão do `DatabaseSeeder`:
 
 - admin: `admin@example.com` / `password`
 - usuário comum: `test@example.com` / `password`

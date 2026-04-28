@@ -2,236 +2,128 @@
 
 ## Visão geral
 
-O projeto segue o modelo:
+O projeto é dividido em duas aplicações:
 
-- backend Laravel API
-- frontend React/Vite separado em `frontend/`
+- backend Laravel em `/`
+- frontend React/Vite em `frontend/`
 
-O backend é a fonte de verdade para domínio, persistência, autenticação, autorização e contratos HTTP. O frontend é uma SPA consumidora da API oficial em `/api/v1`.
+O backend é a fonte de verdade para domínio, persistência, autenticação, autorização e contratos HTTP. O frontend é uma SPA que consome a API oficial versionada em `/api/v1`.
 
-## Convenções ativas
+## Versionamento da API
 
-- base oficial da API: `/api/v1`
+- base oficial ativa: `/api/v1`
 - área administrativa: `/api/v1/admin`
-- chaves JSON serializadas para o frontend em `camelCase`
-- validação de entrada em `FormRequest`
-- respostas estruturadas em `Resource`
-- regras de negócio em `app/Application`
-- models Eloquent em `app/Domain`
 
-As rotas legadas fora de `/api/v1` não fazem parte do fluxo ativo atual.
-
-## Rotas HTTP ativas
-
-Públicas:
-
-- `GET /api/v1/regions`
-- `GET /api/v1/cities`
-- `GET /api/v1/cities/{idOrSlug}`
-- `GET /api/v1/events`
-- `GET /api/v1/events/{idOrSlug}`
-- `GET /api/v1/interest-tags`
-
-Administrativas:
-
-- `POST /api/v1/admin/auth/login`
-- `GET /api/v1/admin/auth/me`
-- `POST /api/v1/admin/auth/logout`
-- `GET /api/v1/admin/cities`
-- `POST /api/v1/admin/cities`
-- `GET /api/v1/admin/cities/{city}`
-- `PUT|PATCH /api/v1/admin/cities/{city}`
-- `DELETE /api/v1/admin/cities/{city}`
-- `GET /api/v1/admin/events`
-- `POST /api/v1/admin/events`
-- `GET /api/v1/admin/events/{event}`
-- `PUT|PATCH /api/v1/admin/events/{event}`
-- `DELETE /api/v1/admin/events/{event}`
-- `GET /api/v1/admin/regions`
-- `POST /api/v1/admin/regions`
-- `PUT|PATCH /api/v1/admin/regions/{region}`
-- `DELETE /api/v1/admin/regions/{region}`
-- `GET /api/v1/admin/interest-tags`
-- `POST /api/v1/admin/interest-tags`
-- `PUT|PATCH /api/v1/admin/interest-tags/{interestTag}`
-- `DELETE /api/v1/admin/interest-tags/{interestTag}`
-- `GET /api/v1/admin/media`
-- `POST /api/v1/admin/media`
-- `DELETE /api/v1/admin/media/{media}`
+As rotas legadas sem versionamento aparecem apenas como bloco comentado em [routes/api.php](/home/hellen/projeto_turismo/routes/api.php:1) e não fazem parte da API ativa.
 
 ## Backend
 
 ### Camadas
 
-- `app/Domain`
-  Modelos Eloquent e relações do domínio.
+- `app/Http`
+  Entrada HTTP. Controllers recebem a requisição, delegam para `FormRequest`, actions e resources.
 
 - `app/Application`
-  Actions e regras de negócio.
+  Casos de uso e regras de negócio. Criação, atualização, listagem, exclusão, geração de slug e sincronização de galeria ficam aqui.
 
-- `app/Http/Controllers/Api`
-  Entrada HTTP fina, delegando para requests, actions e resources.
+- `app/Domain`
+  Models Eloquent e relações de domínio. É a camada principal de persistência do projeto.
 
-- `app/Http/Requests`
-  Validação, autorização e normalização.
-
-- `app/Http/Resources`
-  Serialização JSON.
+- `app/Models`
+  Wrappers de compatibilidade para alguns models. O código novo continua priorizando `app/Domain`, mas o projeto ainda mantém aliases como `App\Models\City`.
 
 - `app/Policies`
-  Autorização por recurso.
+  Autorização por recurso. O admin passa por gate global e também por policies explícitas nos controllers.
 
-### Segurança
+### Controllers públicos vs administrativos
 
-Admin:
+- Controllers públicos em `app/Http/Controllers/Api`
+  Expostos apenas por rotas `GET` em `/api/v1`.
+  São somente leitura.
+  Exemplos: `CityController`, `EventController`, `RegionController`, `InterestTagController`.
 
-- autenticação por Sanctum
-- middleware `auth:sanctum`
-- gate `can:access-admin`
-- policies por recurso
+- Controllers administrativos em `app/Http/Controllers/Api/Admin*`
+  Expostos apenas em `/api/v1/admin`.
+  Executam CRUD, upload de mídia e leitura de sessão.
+  Cada ação sensível chama `authorize(...)` explicitamente e também passa por middleware de autenticação/autorização.
 
-Estados de erro da API:
+### Fluxo de uma requisição pública
 
-- `401` não autenticado
-- `403` sem permissão
-- `409` conflito de integridade
-- `422` validação
+Exemplo: `GET /api/v1/cities/{idOrSlug}`
 
-### Integridade operacional da Fase 4
+1. A rota em [routes/api.php](/home/hellen/projeto_turismo/routes/api.php:1) aponta para `Api\CityController@show`.
+2. O controller resolve o identificador com `FindCityByIdOrSlugAction`.
+3. A action de leitura carrega relações e regras de publicação.
+4. O model em `app/Domain` consulta o banco.
+5. `CityResource` serializa a resposta em `camelCase`.
+6. A API retorna JSON para o frontend público.
 
-As regras de exclusão ficam explicitadas nas actions:
+### Fluxo de uma requisição administrativa
 
-- regiões com cidades vinculadas retornam conflito
-- cidades com eventos vinculados retornam conflito
-- mídia em uso por cidade ou evento retorna conflito
+Exemplo: `PATCH /api/v1/admin/events/{event}`
 
-Essa decisão evita deleções acidentais em cascata no fluxo administrativo, mesmo quando o banco possui relações com `cascadeOnDelete`.
+1. A rota passa por `auth:sanctum` e `can:access-admin`.
+2. O controller administrativo recebe um `UpdateEventRequest`.
+3. O `FormRequest` valida payload, relacionamento, datas e autorização do recurso.
+4. O controller chama `authorize('update', $event)`.
+5. `UpdateEventAction` executa a regra de negócio e persiste a alteração.
+6. `EventResource` serializa o resultado em `camelCase`.
+7. A API retorna JSON para o painel administrativo.
 
-### Mídia
+### Autenticação com Sanctum
 
-O fluxo de upload usa:
+O backend usa Laravel Sanctum em modo token Bearer para o painel atual.
 
-- model `MediaAsset`
-- disk `public`
-- diretório `tourism/media/YYYY/MM`
+Fluxo:
 
-As cidades e eventos se relacionam com mídia por tabelas pivot:
+1. `POST /api/v1/admin/auth/login`
+2. O backend valida e-mail, senha e `is_admin`.
+3. O usuário recebe um token Sanctum com ability `admin`.
+4. O frontend envia `Authorization: Bearer <token>` nas chamadas administrativas.
+5. `GET /api/v1/admin/auth/me` valida a sessão atual.
+6. `POST /api/v1/admin/auth/logout` remove o token corrente.
 
-- `city_media_asset`
-- `event_media_asset`
+### Integridade e segurança
 
-Cada vínculo suporta:
+- middleware administrativo: `auth:sanctum`
+- gate administrativo: `can:access-admin`
+- policies por recurso: `City`, `Event`, `Region`, `InterestTag`, `MediaAsset`
+- respostas JSON padronizadas para `401`, `403`, `404`, `405`, `409`, `422` e `429`
 
-- `sort_order`
-- `alt_text`
-- `is_cover`
+Regras de integridade relevantes:
 
-`coverImage` continua sendo um campo de compatibilidade por URL. Quando esse campo estiver vazio, os resources públicos usam a mídia marcada como capa na galeria.
+- região com cidades vinculadas não pode ser excluída
+- cidade com eventos vinculados não pode ser excluída
+- mídia em uso por cidade ou evento não pode ser excluída
 
-### Entidades administrativas da Fase 4
+### Mídia administrativa
 
-- `Region`
-- `InterestTag`
-- `City`
-- `CityAttraction`
-- `Event`
-- `MediaAsset`
+O backend expõe:
+
+- `GET /api/v1/admin/media`
+- `POST /api/v1/admin/media`
+- `DELETE /api/v1/admin/media/{media}`
+
+Características:
+
+- upload validado via `StoreMediaAssetRequest`
+- tipos permitidos: `jpg`, `jpeg`, `png`, `webp`
+- tamanho máximo: `5120 KB`
+- armazenamento em `public/tourism/media/YYYY/MM`
+- serialização via `MediaAssetResource`
 
 ## Frontend
 
-### Organização
+O frontend detalhado está em [frontend.md](./frontend.md).
 
-- `frontend/src/features`
-  Organização por feature.
+Resumo:
 
-- `frontend/src/shared/lib/api`
-  Cliente HTTP único, configuração base e utilitários comuns.
+- rotas públicas e administrativas ficam em `frontend/src/app/routes.tsx`
+- consumo HTTP centralizado em `frontend/src/shared/lib/api`
+- sessão admin centralizada em `frontend/src/shared/lib/auth/adminSession.ts`
+- features administrativas organizadas em `frontend/src/features/admin`
 
-- `frontend/src/shared/components`
-  Componentes reutilizáveis.
+## Documentação relacionada
 
-### Estratégia de dados
-
-- React Query para leitura, cache e invalidação
-- APIs por feature em `frontend/src/features/*/api`
-- nenhum acesso HTTP direto em páginas fora da camada apropriada
-
-### Painel administrativo
-
-O painel atual cobre:
-
-- cidades
-- eventos
-- regiões
-- tags de interesse
-- upload administrativo de mídia
-
-Fluxos relevantes:
-
-- `ImageUploadField` envia mídia para `/api/v1/admin/media`
-- formulários de cidade e evento referenciam `mediaAssetId` na galeria
-- formulários administrativos invalidam queries relacionadas após create, update e delete
-
-## Fluxo de dados
-
-1. A SPA envia requisição HTTP para `/api/v1/*`
-2. O controller recebe a entrada
-3. Um `FormRequest` valida e autoriza
-4. Uma action em `app/Application` executa o caso de uso
-5. Models em `app/Domain` consultam ou persistem o banco
-6. Um `Resource` serializa a resposta
-7. O frontend atualiza tela e cache
-
-## Execução local
-
-### Backend
-
-```bash
-composer install
-cp .env.example .env
-php artisan key:generate
-touch database/database.sqlite
-php artisan migrate --seed
-php artisan storage:link
-php artisan serve
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Variável principal do frontend
-
-```bash
-VITE_API_URL=http://localhost:8000/api/v1
-```
-
-## Qualidade e validação
-
-No root:
-
-```bash
-npm run backend:test
-npm run backend:lint
-npm run frontend:test
-npm run frontend:lint
-npm run frontend:build
-```
-
-Atalhos agregados:
-
-```bash
-npm run test
-npm run lint
-npm run build
-```
-
-## Limitações conhecidas
-
-- o frontend público ainda não possui página própria de detalhe do evento
-- tags de interesse ainda não expõem contadores de uso no contrato da API
-- o bloco comentado de aliases legados em `routes/api.php` serve apenas como referência histórica e não como parte ativa da arquitetura
+- [Admin API](./admin-api.md)
+- [Frontend](./frontend.md)
