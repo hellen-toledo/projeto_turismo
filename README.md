@@ -61,6 +61,21 @@ npm run frontend:lint
 npm run frontend:build
 ```
 
+Equivalentes diretos usados no CI:
+
+```bash
+composer install
+php artisan migrate --env=testing --force
+php artisan test
+./vendor/bin/pint --test
+
+cd frontend
+npm ci
+npm run lint
+npm run test
+npm run build
+```
+
 Atalhos agregados:
 
 ```bash
