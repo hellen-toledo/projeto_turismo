@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarRange, MapPinned, Shield } from 'lucide-react';
+import { ArrowRight, CalendarRange, Images, MapPinned, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const cards = [
@@ -13,6 +13,12 @@ const cards = [
     title: 'Eventos',
     description: 'Gerencie agenda, destaque editorial e vínculo com cidades/tags.',
     icon: CalendarRange,
+  },
+  {
+    to: '/admin/media',
+    title: 'Mídia',
+    description: 'Centralize upload, preview, remoção e reutilização de imagens administrativas.',
+    icon: Images,
   },
 ];
 
@@ -29,7 +35,7 @@ export const AdminHomePage = () => {
         </div>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-2">
+      <section className="grid gap-5 xl:grid-cols-3">
         {cards.map((card) => {
           const Icon = card.icon;
 

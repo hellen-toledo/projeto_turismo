@@ -6,6 +6,7 @@ import { AdminEventsPage } from '../features/admin/pages/AdminEventsPage';
 import { AdminHomePage } from '../features/admin/pages/AdminHomePage';
 import { AdminInterestTagsPage } from '../features/admin/pages/AdminInterestTagsPage';
 import { AdminLoginPage } from '../features/admin/pages/AdminLoginPage';
+import { AdminMediaPage } from '../features/admin/pages/AdminMediaPage';
 import { AdminRegionsPage } from '../features/admin/pages/AdminRegionsPage';
 import { CityDetailsPage } from '../pages/CityDetailsPage';
 import { CitiesPage } from '../pages/CitiesPage';
@@ -73,6 +74,10 @@ export const router = createBrowserRouter([
           {
             path: 'events',
             element: <AdminEventsPage />,
+          },
+          {
+            path: 'media',
+            element: <AdminMediaPage />,
           },
           {
             path: 'regions',

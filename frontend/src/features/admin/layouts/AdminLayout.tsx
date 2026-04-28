@@ -1,4 +1,4 @@
-import { Building2, CalendarRange, LogOut, MapPinned, Shapes, Waypoints } from 'lucide-react';
+import { Building2, CalendarRange, Images, LogOut, MapPinned, Shapes, Waypoints } from 'lucide-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 
@@ -6,6 +6,7 @@ const navItems = [
   { to: '/admin', label: 'Visão Geral', icon: Building2, end: true },
   { to: '/admin/cities', label: 'Cidades', icon: MapPinned },
   { to: '/admin/events', label: 'Eventos', icon: CalendarRange },
+  { to: '/admin/media', label: 'Mídia', icon: Images },
   { to: '/admin/regions', label: 'Regiões', icon: Waypoints },
   { to: '/admin/interest-tags', label: 'Tags', icon: Shapes },
 ];
