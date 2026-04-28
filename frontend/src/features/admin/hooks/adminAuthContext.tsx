@@ -1,45 +1,55 @@
 import {
   useEffect,
   useMemo,
-  useState,
   type PropsWithChildren,
+  useState,
 } from 'react';
-import type { AdminUser } from '../../../shared/types/api';
-import { clearStoredAdminAuth, readStoredAdminAuth, writeStoredAdminAuth } from '../../../shared/lib/auth/adminAuthStorage';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
-import { getAdminSession, loginAdmin, logoutAdmin } from '../api/authApi';
+import {
+  clearAdminSession,
+  restoreAdminSession,
+  setAdminSession,
+  subscribeToAdminSession,
+  type AdminSession,
+} from '../../../shared/lib/auth/adminSession';
+import { getAdminSession as fetchAdminSession, loginAdmin, logoutAdmin } from '../api/authApi';
 import { AdminAuthContext, type AdminAuthContextValue } from './adminAuthContextValue';
 
 export const AdminAuthProvider = ({ children }: PropsWithChildren) => {
-  const storedAuth = readStoredAdminAuth();
-  const [token, setToken] = useState<string | null>(storedAuth?.token ?? null);
-  const [user, setUser] = useState<AdminUser | null>(storedAuth?.user ?? null);
-  const [isInitializing, setIsInitializing] = useState(Boolean(storedAuth?.token));
+  const [session, setSession] = useState<AdminSession | null>(() => restoreAdminSession());
+  const [isInitializing, setIsInitializing] = useState(Boolean(session?.token));
+
+  useEffect(() => subscribeToAdminSession((nextSession) => {
+    setSession(nextSession);
+
+    if (!nextSession?.token) {
+      setIsInitializing(false);
+    }
+  }), []);
 
   useEffect(() => {
-    if (!storedAuth?.token) {
+    if (!session?.token) {
+      setIsInitializing(false);
       return;
     }
 
     let isMounted = true;
+    setIsInitializing(true);
 
-    getAdminSession()
+    fetchAdminSession()
       .then((sessionUser) => {
         if (!isMounted) {
           return;
         }
 
-        setUser(sessionUser);
-        writeStoredAdminAuth({ token: storedAuth.token, user: sessionUser });
+        setAdminSession({ token: session.token, user: sessionUser });
       })
       .catch(() => {
         if (!isMounted) {
           return;
         }
 
-        clearStoredAdminAuth();
-        setToken(null);
-        setUser(null);
+        clearAdminSession();
       })
       .finally(() => {
         if (isMounted) {
@@ -50,7 +60,10 @@ export const AdminAuthProvider = ({ children }: PropsWithChildren) => {
     return () => {
       isMounted = false;
     };
-  }, [storedAuth?.token]);
+  }, [session?.token]);
+
+  const token = session?.token ?? null;
+  const user = session?.user ?? null;
 
   const value = useMemo<AdminAuthContextValue>(
     () => ({
@@ -66,9 +79,7 @@ export const AdminAuthProvider = ({ children }: PropsWithChildren) => {
             deviceName: 'frontend-admin',
           });
 
-          setToken(response.token);
-          setUser(response.user);
-          writeStoredAdminAuth({ token: response.token, user: response.user });
+          setAdminSession({ token: response.token, user: response.user });
         } catch (error) {
           throw new Error(getApiErrorMessage(error, 'Falha ao autenticar administrador.'));
         }
@@ -77,9 +88,7 @@ export const AdminAuthProvider = ({ children }: PropsWithChildren) => {
         try {
           await logoutAdmin();
         } finally {
-          clearStoredAdminAuth();
-          setToken(null);
-          setUser(null);
+          clearAdminSession();
         }
       },
     }),
