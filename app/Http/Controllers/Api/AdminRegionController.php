@@ -34,6 +34,8 @@ class AdminRegionController extends Controller
 
     public function update(UpdateRegionRequest $request, Region $region, UpdateRegionAction $updateRegion): RegionResource
     {
+        $this->authorize('update', $region);
+
         return new RegionResource($updateRegion($region, $request->validated()));
     }
 

@@ -50,6 +50,8 @@ class AdminCityController extends Controller
 
     public function update(UpdateCityRequest $request, City $city, UpdateCityAction $updateCity): CityResource
     {
+        $this->authorize('update', $city);
+
         return new CityResource($updateCity($city, $request->validated()));
     }
 

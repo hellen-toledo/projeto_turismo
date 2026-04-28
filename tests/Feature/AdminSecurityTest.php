@@ -4,9 +4,14 @@ namespace Tests\Feature;
 
 use App\Models\City;
 use App\Models\Event;
+use App\Models\InterestTag;
 use App\Models\MediaAsset;
 use App\Models\Region;
 use App\Models\User;
+use App\Policies\CityPolicy;
+use App\Policies\EventPolicy;
+use App\Policies\InterestTagPolicy;
+use App\Policies\RegionPolicy;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -122,6 +127,130 @@ class AdminSecurityTest extends TestCase
         Storage::disk('public')->assertExists($media->path);
     }
 
+    public function test_city_update_respects_policy(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+        $this->denyPolicyAbility(CityPolicy::class, 'update');
+
+        $region = Region::factory()->create();
+        $city = City::factory()->for($region)->create();
+
+        $this->patchJson("/api/v1/admin/cities/{$city->id}", [
+            'summary' => 'Resumo bloqueado pela policy.',
+        ])
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'Forbidden.',
+            ]);
+    }
+
+    public function test_city_delete_respects_policy(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+        $this->denyPolicyAbility(CityPolicy::class, 'delete');
+
+        $region = Region::factory()->create();
+        $city = City::factory()->for($region)->create();
+
+        $this->deleteJson("/api/v1/admin/cities/{$city->id}")
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'Forbidden.',
+            ]);
+    }
+
+    public function test_event_update_respects_policy(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+        $this->denyPolicyAbility(EventPolicy::class, 'update');
+
+        $city = City::factory()->create();
+        $event = Event::factory()->for($city)->create();
+
+        $this->patchJson("/api/v1/admin/events/{$event->id}", [
+            'title' => 'Evento bloqueado pela policy',
+        ])
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'Forbidden.',
+            ]);
+    }
+
+    public function test_event_delete_respects_policy(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+        $this->denyPolicyAbility(EventPolicy::class, 'delete');
+
+        $city = City::factory()->create();
+        $event = Event::factory()->for($city)->create();
+
+        $this->deleteJson("/api/v1/admin/events/{$event->id}")
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'Forbidden.',
+            ]);
+    }
+
+    public function test_region_update_respects_policy(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+        $this->denyPolicyAbility(RegionPolicy::class, 'update');
+
+        $region = Region::factory()->create();
+
+        $this->patchJson("/api/v1/admin/regions/{$region->id}", [
+            'name' => 'Regiao bloqueada',
+        ])
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'Forbidden.',
+            ]);
+    }
+
+    public function test_region_delete_respects_policy(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+        $this->denyPolicyAbility(RegionPolicy::class, 'delete');
+
+        $region = Region::factory()->create();
+
+        $this->deleteJson("/api/v1/admin/regions/{$region->id}")
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'Forbidden.',
+            ]);
+    }
+
+    public function test_interest_tag_update_respects_policy(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+        $this->denyPolicyAbility(InterestTagPolicy::class, 'update');
+
+        $interestTag = InterestTag::factory()->create();
+
+        $this->patchJson("/api/v1/admin/interest-tags/{$interestTag->id}", [
+            'name' => 'Tag bloqueada',
+        ])
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'Forbidden.',
+            ]);
+    }
+
+    public function test_interest_tag_delete_respects_policy(): void
+    {
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+        $this->denyPolicyAbility(InterestTagPolicy::class, 'delete');
+
+        $interestTag = InterestTag::factory()->create();
+
+        $this->deleteJson("/api/v1/admin/interest-tags/{$interestTag->id}")
+            ->assertForbidden()
+            ->assertJson([
+                'message' => 'Forbidden.',
+            ]);
+    }
+
     private function fakePngImage(string $name): UploadedFile
     {
         $png = base64_decode(
@@ -130,5 +259,24 @@ class AdminSecurityTest extends TestCase
         );
 
         return UploadedFile::fake()->createWithContent($name, $png ?: '');
+    }
+
+    private function denyPolicyAbility(string $policyClass, string $ability): void
+    {
+        $this->app->instance($policyClass, new DenySingleAbilityPolicy($ability));
+    }
+}
+
+class DenySingleAbilityPolicy
+{
+    public function __construct(private readonly string $abilityToDeny) {}
+
+    public function __call(string $method, array $arguments): bool
+    {
+        if ($method === $this->abilityToDeny) {
+            return false;
+        }
+
+        return true;
     }
 }

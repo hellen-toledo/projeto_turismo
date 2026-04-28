@@ -37,6 +37,8 @@ class AdminInterestTagController extends Controller
         InterestTag $interestTag,
         UpdateInterestTagAction $updateInterestTag
     ): InterestTagResource {
+        $this->authorize('update', $interestTag);
+
         return new InterestTagResource($updateInterestTag($interestTag, $request->validated()));
     }
 

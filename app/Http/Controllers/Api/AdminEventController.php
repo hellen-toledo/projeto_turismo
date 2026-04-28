@@ -43,6 +43,8 @@ class AdminEventController extends Controller
 
     public function update(UpdateEventRequest $request, Event $event, UpdateEventAction $updateEvent): EventResource
     {
+        $this->authorize('update', $event);
+
         return new EventResource($updateEvent($event, $request->validated()));
     }
 
