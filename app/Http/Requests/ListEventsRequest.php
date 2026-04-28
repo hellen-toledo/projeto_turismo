@@ -2,10 +2,15 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\HasCommonRequestRules;
+use App\Http\Requests\Concerns\ProvidesPortugueseValidation;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ListEventsRequest extends FormRequest
 {
+    use HasCommonRequestRules;
+    use ProvidesPortugueseValidation;
+
     protected function prepareForValidation(): void
     {
         $payload = [];
@@ -33,8 +38,7 @@ class ListEventsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
+            ...$this->paginationRules(),
             'q' => ['nullable', 'string', 'max:255'],
             'search' => ['nullable', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'],

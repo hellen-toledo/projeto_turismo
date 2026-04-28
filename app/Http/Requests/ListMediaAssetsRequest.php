@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests;
 
-use App\Domain\MediaAssets\MediaAsset;
+use App\Http\Requests\Concerns\HasCommonRequestRules;
+use App\Http\Requests\Concerns\ProvidesPortugueseValidation;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class ListMediaAssetsRequest extends FormRequest
 {
+    use HasCommonRequestRules;
+    use ProvidesPortugueseValidation;
+
     public function authorize(): bool
     {
         return true;
@@ -16,9 +19,8 @@ class ListMediaAssetsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'page' => ['sometimes', 'integer', 'min:1'],
-            'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
-            'collection' => ['nullable', 'string', Rule::in(MediaAsset::collections())],
+            ...$this->paginationRules(),
+            ...$this->mediaCollectionRules(),
         ];
     }
 }

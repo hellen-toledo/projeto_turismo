@@ -3,11 +3,14 @@
 namespace App\Http\Requests;
 
 use App\Domain\InterestTags\InterestTag;
+use App\Http\Requests\Concerns\ProvidesPortugueseValidation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StoreInterestTagRequest extends FormRequest
 {
+    use ProvidesPortugueseValidation;
+
     public function authorize(): bool
     {
         return (bool) $this->user()?->can('create', InterestTag::class);

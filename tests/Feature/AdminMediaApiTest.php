@@ -72,7 +72,24 @@ class AdminMediaApiTest extends TestCase
             'collection' => 'cover',
         ])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['file']);
+            ->assertJsonValidationErrors(['file'])
+            ->assertJsonPath('errors.file.0', 'O campo arquivo deve ser uma imagem válida.');
+    }
+
+    public function test_media_upload_validates_invalid_collection(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+
+        $this->post('/api/v1/admin/media', [
+            'file' => $this->fakePngImage('cover.png'),
+            'collection' => 'invalid',
+        ], [
+            'Accept' => 'application/json',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['collection'])
+            ->assertJsonPath('errors.collection.0', 'O valor informado para coleção é inválido.');
     }
 
     public function test_admin_can_delete_media_and_physical_file(): void

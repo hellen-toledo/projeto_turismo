@@ -2,10 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ProvidesPortugueseValidation;
 use Illuminate\Foundation\Http\FormRequest;
 
 class AdminLoginRequest extends FormRequest
 {
+    use ProvidesPortugueseValidation;
+
     public function authorize(): bool
     {
         return true;

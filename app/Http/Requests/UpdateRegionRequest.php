@@ -3,11 +3,14 @@
 namespace App\Http\Requests;
 
 use App\Domain\Regions\Region;
+use App\Http\Requests\Concerns\ProvidesPortugueseValidation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateRegionRequest extends FormRequest
 {
+    use ProvidesPortugueseValidation;
+
     public function authorize(): bool
     {
         $region = $this->route('region');
