@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Application\Cities\CreateCityAction;
 use App\Application\Cities\DeleteCityAction;
 use App\Application\Cities\ListCitiesAction;
-use App\Application\Cities\ShowCityAction;
 use App\Application\Cities\UpdateCityAction;
 use App\Domain\Cities\City;
 use App\Http\Controllers\Controller;
@@ -25,7 +24,7 @@ class AdminCityController extends Controller
         return CityResource::collection($listCities($request->validated(), true));
     }
 
-    public function show(City $city, ShowCityAction $showCity): CityResource
+    public function show(City $city): CityResource
     {
         $this->authorize('view', $city);
 
