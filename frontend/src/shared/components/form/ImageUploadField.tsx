@@ -1,9 +1,10 @@
 import { ImageIcon, Link as LinkIcon, LoaderCircle, Trash2, Upload } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import { uploadAdminMedia } from '../../../features/admin/api/adminMediaApi';
 import type { MediaAsset } from '../../types/api';
 import { getApiErrorMessage } from '../../lib/api/getApiErrorMessage';
 import { FormField } from './FormField';
+
+type UploadCollection = 'cover' | 'gallery' | 'general';
 
 interface ImageUploadFieldProps {
   id: string;
@@ -14,9 +15,11 @@ interface ImageUploadFieldProps {
   onAltTextChange?: (value: string) => void;
   error?: string;
   hint?: string;
-  uploadCollection?: 'cover' | 'gallery' | 'general';
+  uploadCollection?: UploadCollection;
+  onUpload?: (file: File, options: { altText: string; collection: UploadCollection }) => Promise<MediaAsset>;
   onUploadComplete?: (media: MediaAsset) => void;
   allowManualUrl?: boolean;
+  showAltText?: boolean;
 }
 
 type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
@@ -41,10 +44,12 @@ export const ImageUploadField = ({
   label,
   onAltTextChange,
   onChange,
+  onUpload,
   onUploadComplete,
   uploadCollection = 'cover',
   value,
   allowManualUrl = true,
+  showAltText = true,
 }: ImageUploadFieldProps) => {
   const [internalAltText, setInternalAltText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -125,7 +130,11 @@ export const ImageUploadField = ({
     setStatusMessage('Enviando imagem...');
 
     try {
-      const media = await uploadAdminMedia(selectedFile, {
+      if (!onUpload) {
+        throw new Error('Upload indisponível para este campo.');
+      }
+
+      const media = await onUpload(selectedFile, {
         altText: resolvedAltText,
         collection: uploadCollection,
       });
@@ -173,18 +182,20 @@ export const ImageUploadField = ({
             />
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-            <input
-              aria-describedby={describedBy}
-              className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-emerald-500"
-              id={`${id}-alt-text`}
-              onChange={(event) => {
-                setAltTextValue(event.target.value);
-              }}
-              placeholder="Texto alternativo da imagem"
-              type="text"
-              value={resolvedAltText}
-            />
+          <div className={showAltText ? 'grid gap-3 sm:grid-cols-[1fr_auto]' : 'flex flex-wrap gap-2'}>
+            {showAltText ? (
+              <input
+                aria-describedby={describedBy}
+                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-emerald-500"
+                id={`${id}-alt-text`}
+                onChange={(event) => {
+                  setAltTextValue(event.target.value);
+                }}
+                placeholder="Texto alternativo da imagem"
+                type="text"
+                value={resolvedAltText}
+              />
+            ) : null}
             <div className="flex flex-wrap gap-2">
               <input
                 accept="image/jpeg,image/png,image/webp"

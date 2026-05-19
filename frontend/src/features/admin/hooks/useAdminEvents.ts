@@ -24,7 +24,8 @@ export const useAdminEventMutations = () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'events'] }),
       queryClient.invalidateQueries({ queryKey: ['admin', 'event'] }),
       queryClient.invalidateQueries({ queryKey: ['events'] }),
-      eventId ? queryClient.invalidateQueries({ queryKey: ['event', String(eventId)] }) : Promise.resolve(),
+      queryClient.invalidateQueries({ queryKey: ['event'] }),
+      eventId ? queryClient.removeQueries({ queryKey: ['event', String(eventId)] }) : Promise.resolve(),
     ]);
   };
 

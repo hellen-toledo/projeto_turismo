@@ -63,11 +63,13 @@ describe('AdminMediaPage', () => {
     const user = userEvent.setup();
     renderWithProviders(<AdminMediaPage />, { route: '/admin/media' });
 
+    await user.click(screen.getByRole('button', { name: 'Enviar mídia' }));
+
     const file = new File(['image'], 'foto.jpg', { type: 'image/jpeg' });
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
 
     await user.upload(input, file);
-    await user.click(screen.getByRole('button', { name: 'Enviar mídia' }));
+    await user.click(screen.getByRole('button', { name: 'Confirmar e Enviar' }));
 
     await waitFor(() => {
       expect(mockUploadMedia).toHaveBeenCalledWith({

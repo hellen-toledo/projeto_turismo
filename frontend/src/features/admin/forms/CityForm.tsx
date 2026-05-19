@@ -10,6 +10,8 @@ import { TextInput } from '../../../shared/components/form/TextInput';
 import { TextareaField } from '../../../shared/components/form/TextareaField';
 import { ToggleField } from '../../../shared/components/form/ToggleField';
 import { getApiErrorMessage, getApiValidationErrors } from '../../../shared/lib/api/getApiErrorMessage';
+import { uploadAdminMedia } from '../api/adminMediaApi';
+import { adminButtonClassName } from '../components/adminUiStyles';
 import { useAdminCityMutations } from '../hooks/useAdminCities';
 import type {
   AdminFeedback,
@@ -17,14 +19,13 @@ import type {
   AdminValidationErrors,
   CityAttractionFormValue,
   CityFormValues,
-  CityGalleryItemFormValue,
 } from '../types/admin';
 import {
   createEmptyCityAttraction,
   createEmptyCityForm,
-  createEmptyCityGalleryItem,
   mapCityToFormValues,
 } from '../types/admin';
+import { useGalleryItems } from './useGalleryItems';
 import { validateCityForm } from './validators';
 
 interface CityFormProps {
@@ -32,11 +33,12 @@ interface CityFormProps {
   isLoadingCity?: boolean;
   regionOptions: AdminOption[];
   tagOptions: AdminOption[];
+  onSuccess?: () => void;
 }
 
 const getNestedError = (errors: AdminValidationErrors, path: string) => errors[path];
 
-export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOptions }: CityFormProps) => {
+export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOptions, onSuccess }: CityFormProps) => {
   const createInitialValues = () => (city ? mapCityToFormValues(city) : createEmptyCityForm());
   const [values, setValues] = useState<CityFormValues>(createInitialValues);
   const [errors, setErrors] = useState<AdminValidationErrors>({});
@@ -52,12 +54,12 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
     }));
   };
 
-  const updateGalleryItem = (itemId: string, updater: (item: CityGalleryItemFormValue) => CityGalleryItemFormValue) => {
-    setFieldValue(
-      'gallery',
-      values.gallery.map((item) => (item.id === itemId ? updater(item) : item)),
-    );
-  };
+  const {
+    addGalleryItem,
+    markGalleryCover,
+    removeGalleryItem,
+    updateGalleryItem,
+  } = useGalleryItems(values.gallery, (gallery) => setFieldValue('gallery', gallery));
 
   const updateAttraction = (tempId: string, updater: (item: CityAttractionFormValue) => CityAttractionFormValue) => {
     setFieldValue(
@@ -96,6 +98,10 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
       if (!city) {
         setValues(createEmptyCityForm());
       }
+
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       const apiValidationErrors = getApiValidationErrors(error);
       if (Object.keys(apiValidationErrors).length > 0) {
@@ -111,38 +117,6 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
         });
       }
     }
-  };
-
-  const addGalleryItem = () => {
-    setFieldValue('gallery', [...values.gallery, createEmptyCityGalleryItem(values.gallery.length)]);
-  };
-
-  const removeGalleryItem = (itemId: string) => {
-    const nextGallery = values.gallery.filter((item) => item.id !== itemId);
-    const normalizedGallery = nextGallery.map((item, index) => ({
-      ...item,
-      sortOrder: index,
-      isCover: nextGallery.length === 1 ? true : item.isCover,
-    }));
-
-    if (normalizedGallery.length > 0 && normalizedGallery.every((item) => !item.isCover)) {
-      normalizedGallery[0] = {
-        ...normalizedGallery[0],
-        isCover: true,
-      };
-    }
-
-    setFieldValue('gallery', normalizedGallery);
-  };
-
-  const markGalleryCover = (itemId: string) => {
-    setFieldValue(
-      'gallery',
-      values.gallery.map((item) => ({
-        ...item,
-        isCover: item.id === itemId,
-      })),
-    );
   };
 
   const addAttraction = () => {
@@ -242,17 +216,15 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
       />
 
       <ImageUploadField
-        altText={values.coverImageAltText}
         error={errors.coverImage}
         hint="Aceita URL manual ou upload real para o painel administrativo."
         id="city-cover-image"
         label="Imagem de capa"
-        onAltTextChange={(value) => {
-          setFieldValue('coverImageAltText', value);
-        }}
         onChange={(value) => {
           setFieldValue('coverImage', value);
         }}
+        onUpload={uploadAdminMedia}
+        showAltText={false}
         uploadCollection="cover"
         value={values.coverImage}
       />
@@ -334,6 +306,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
                       size: media.size,
                     }));
                   }}
+                  onUpload={uploadAdminMedia}
                   uploadCollection="gallery"
                   value={item.url}
                 />
@@ -467,6 +440,8 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
                         imageUrl: value,
                       }));
                     }}
+                    onUpload={uploadAdminMedia}
+                    showAltText={false}
                     uploadCollection="gallery"
                     value={attraction.imageUrl}
                   />
@@ -495,7 +470,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
 
       <FormActions>
         <button
-          className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+          className={adminButtonClassName.secondary}
           onClick={() => {
             setValues(createInitialValues());
             setErrors({});
@@ -506,7 +481,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
           Limpar
         </button>
         <button
-          className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+          className={adminButtonClassName.primary}
           disabled={isSubmitting}
           type="submit"
         >

@@ -24,7 +24,8 @@ export const useAdminCityMutations = () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'cities'] }),
       queryClient.invalidateQueries({ queryKey: ['admin', 'city'] }),
       queryClient.invalidateQueries({ queryKey: ['cities'] }),
-      cityId ? queryClient.invalidateQueries({ queryKey: ['city', String(cityId)] }) : Promise.resolve(),
+      queryClient.invalidateQueries({ queryKey: ['city'] }),
+      cityId ? queryClient.removeQueries({ queryKey: ['city', String(cityId)] }) : Promise.resolve(),
     ]);
   };
 

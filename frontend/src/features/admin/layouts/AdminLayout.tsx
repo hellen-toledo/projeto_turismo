@@ -1,11 +1,12 @@
-import { Building2, CalendarRange, Globe2, Images, Landmark, LogOut, MapPinned, Menu, Shapes, Waypoints, X } from 'lucide-react';
-import { useState } from 'react';
-import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { CalendarRange, ChevronLeft, ChevronRight, Home, Images, Landmark, LogOut, MapPinned, Menu, Moon, Shapes, Sun, Waypoints, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { getStoredString, setStoredString } from '../../../shared/lib/storage/browserStorage';
 import { adminButtonClassName } from '../components/adminUiStyles';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 
 const navItems = [
-  { to: '/admin', label: 'Visão geral', icon: Building2, end: true },
+  { to: '/admin', label: 'Visão geral', icon: Home, end: true },
   { to: '/admin/events', label: 'Eventos', icon: CalendarRange },
   { to: '/admin/cities', label: 'Cidades', icon: MapPinned },
   { to: '/admin/regions', label: 'Regiões', icon: Waypoints },
@@ -13,10 +14,13 @@ const navItems = [
   { to: '/admin/interest-tags', label: 'Tags', icon: Shapes },
 ];
 
-const navItemClassName = ({ isActive }: { isActive: boolean }) =>
+const navItemClassName = ({ isActive }: { isActive: boolean }, isCollapsed: boolean) =>
   [
-    'flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold transition',
-    isActive ? 'bg-slate-950 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
+    'relative flex items-center rounded-xl text-base font-semibold transition',
+    isCollapsed ? 'justify-center w-11 h-11' : 'w-full gap-4 px-4 py-4 text-left',
+    isActive
+      ? 'bg-slate-100 text-slate-950 shadow-sm before:absolute before:right-5 before:h-2.5 before:w-2.5 before:rounded-full before:bg-teal-700/60'
+      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950',
   ].join(' ');
 
 const moduleLabelByPath = new Map<string, string>([
@@ -28,51 +32,62 @@ const moduleLabelByPath = new Map<string, string>([
   ['/admin/interest-tags', 'Tags'],
 ]);
 
+const adminThemeStorageKey = 'turismo-admin-theme';
+
 interface SidebarProps {
-  currentPath: string;
   onNavigate?: () => void;
+  isCollapsed?: boolean;
+  onLogout: () => void;
 }
 
-const Sidebar = ({ currentPath, onNavigate }: SidebarProps) => (
+const Sidebar = ({ onNavigate, isCollapsed = false, onLogout }: SidebarProps) => (
   <div className="flex h-full flex-col">
-    <div className="flex items-center gap-3 px-5 py-6">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
+    <div className={['flex items-center py-8', isCollapsed ? 'justify-center' : 'gap-5 px-7'].join(' ')}>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
         <Landmark className="h-5 w-5" />
       </div>
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Turismo</p>
-        <p className="text-base font-bold text-slate-950">Norte-Goiano</p>
-      </div>
+      {!isCollapsed && (
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Turismo</p>
+          <p className="truncate text-base font-bold text-slate-950">Norte-Goiano</p>
+        </div>
+      )}
     </div>
 
-    <nav aria-label="Navegação administrativa" className="flex-1 space-y-1 px-3">
+    <nav aria-label="Navegação administrativa" className={['flex-1 space-y-3 pt-8', isCollapsed ? 'px-2 flex flex-col items-center' : 'px-5'].join(' ')}>
       {navItems.map((item) => {
         const Icon = item.icon;
 
         return (
           <NavLink
             key={item.to}
-            className={navItemClassName}
+            className={(props) => navItemClassName(props, isCollapsed)}
             end={item.end}
             onClick={onNavigate}
             to={item.to}
+            title={isCollapsed ? item.label : undefined}
           >
-            <Icon className="h-4 w-4" />
-            {item.label}
+            <Icon className="h-6 w-6 shrink-0 text-slate-800" />
+            {!isCollapsed && <span>{item.label}</span>}
           </NavLink>
         );
       })}
     </nav>
 
-    <div className="m-3 rounded-3xl bg-emerald-50 p-4 text-emerald-950 ring-1 ring-emerald-100">
-      <p className="text-sm font-bold">Portal público</p>
-      <p className="mt-1 text-xs leading-5 text-emerald-800">Revise rapidamente como cidades e eventos aparecem fora da área administrativa.</p>
-      <Link className="mt-4 inline-flex items-center gap-2 rounded-2xl bg-white px-3 py-2 text-xs font-bold text-emerald-800 shadow-sm transition hover:-translate-y-0.5" to="/">
-        Abrir portal
-        <Globe2 className="h-3.5 w-3.5" />
-      </Link>
-      <p className="mt-4 text-xs text-emerald-900/70">Módulo ativo: {moduleLabelByPath.get(currentPath) ?? 'Painel'}</p>
-    </div>
+    {!isCollapsed ? (
+      <div className="p-5">
+        <button className="flex w-full items-center gap-4 rounded-xl px-4 py-4 text-left text-base font-semibold text-slate-800 transition hover:bg-slate-50" onClick={onLogout} type="button">
+          <LogOut className="h-6 w-6" />
+          Sair
+        </button>
+      </div>
+    ) : (
+      <div className="p-3 flex justify-center">
+        <button className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-50" onClick={onLogout} title="Sair" type="button">
+          <LogOut className="h-5 w-5" />
+        </button>
+      </div>
+    )}
   </div>
 );
 
@@ -81,7 +96,13 @@ export const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isDarkTheme, setIsDarkTheme] = useState(() => getStoredString(adminThemeStorageKey) === 'dark');
   const currentModule = moduleLabelByPath.get(location.pathname) ?? 'Painel';
+
+  useEffect(() => {
+    setStoredString(adminThemeStorageKey, isDarkTheme ? 'dark' : 'light');
+  }, [isDarkTheme]);
 
   const handleLogout = async () => {
     await logout();
@@ -89,11 +110,22 @@ export const AdminLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-slate-200 bg-white lg:block">
-        <Sidebar currentPath={location.pathname} />
+    <div className={['admin-shell min-h-screen transition-colors', isDarkTheme ? 'admin-dark bg-slate-950 text-slate-100' : 'admin-light bg-white text-slate-900'].join(' ')}>
+      {/* Desktop Sidebar */}
+      <aside className={['fixed inset-y-0 left-0 z-40 hidden border-r border-slate-200 bg-white transition-all duration-300 lg:block', isCollapsed ? 'w-20' : 'w-72'].join(' ')}>
+        <Sidebar isCollapsed={isCollapsed} onLogout={() => void handleLogout()} />
+        
+        {/* Toggle Collapse Button */}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="absolute -right-4 top-24 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:text-slate-700 focus:outline-none"
+          title={isCollapsed ? "Expandir menu" : "Recolher menu"}
+        >
+          {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+        </button>
       </aside>
 
+      {/* Mobile Sidebar */}
       {mobileMenuOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
@@ -104,7 +136,7 @@ export const AdminLayout = () => {
             }}
             type="button"
           />
-          <aside className="relative h-full w-80 max-w-[85vw] border-r border-slate-200 bg-white shadow-2xl">
+          <aside className="relative h-full w-72 max-w-[85vw] border-r border-slate-200 bg-white shadow-2xl">
             <button
               aria-label="Fechar navegação"
               className={['absolute right-4 top-4', adminButtonClassName.ghost].join(' ')}
@@ -116,18 +148,19 @@ export const AdminLayout = () => {
               <X className="h-5 w-5" />
             </button>
             <Sidebar
-              currentPath={location.pathname}
               onNavigate={() => {
                 setMobileMenuOpen(false);
               }}
+              isCollapsed={false}
+              onLogout={() => void handleLogout()}
             />
           </aside>
         </div>
       ) : null}
 
-      <div className="lg:pl-72">
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/85 backdrop-blur-xl">
-          <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+      <div className={['transition-all duration-300', isCollapsed ? 'lg:pl-20' : 'lg:pl-72'].join(' ')}>
+        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+          <div className="flex min-h-20 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
             <div className="flex items-center gap-3">
               <button
                 aria-label="Abrir navegação"
@@ -145,27 +178,32 @@ export const AdminLayout = () => {
               </div>
             </div>
 
-            <div className="hidden items-center gap-3 sm:flex">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-                Perfil: <span className="font-semibold text-slate-950">{user?.name ?? 'Administrador'}</span>
-              </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-950 text-sm font-bold text-white">
-                {(user?.name ?? 'AD')
-                  .split(' ')
-                  .slice(0, 2)
-                  .map((part) => part.charAt(0).toUpperCase())
-                  .join('')
-                  .slice(0, 2)}
-              </div>
-              <button className={adminButtonClassName.secondary} onClick={() => void handleLogout()} type="button">
-                <LogOut className="h-4 w-4" />
-                Sair
+            <div className="flex items-center gap-2 sm:gap-4">
+              <button
+                aria-label={isDarkTheme ? 'Ativar tema claro' : 'Ativar tema escuro'}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
+                onClick={() => setIsDarkTheme((current) => !current)}
+                title={isDarkTheme ? 'Ativar tema claro' : 'Ativar tema escuro'}
+                type="button"
+              >
+                {isDarkTheme ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </button>
+              <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 sm:flex">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-bold text-slate-950">
+                  {(user?.name ?? 'AD')
+                    .split(' ')
+                    .slice(0, 2)
+                    .map((part) => part.charAt(0).toUpperCase())
+                    .join('')
+                    .slice(0, 2)}
+                </div>
+                <span className="max-w-40 truncate text-base font-semibold text-slate-950">{user?.name ?? 'Administrador'}</span>
+              </div>
             </div>
           </div>
         </header>
 
-        <main className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main className="mx-auto max-w-[1700px] px-0 py-0 sm:px-0 lg:px-8 lg:py-8">
           <Outlet />
         </main>
       </div>

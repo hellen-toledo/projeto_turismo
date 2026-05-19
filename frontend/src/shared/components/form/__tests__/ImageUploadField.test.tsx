@@ -8,10 +8,6 @@ const { mockUploadAdminMedia } = vi.hoisted(() => ({
   mockUploadAdminMedia: vi.fn(),
 }));
 
-vi.mock('../../../../features/admin/api/adminMediaApi', () => ({
-  uploadAdminMedia: mockUploadAdminMedia,
-}));
-
 describe('ImageUploadField', () => {
   beforeEach(() => {
     mockUploadAdminMedia.mockReset();
@@ -65,6 +61,7 @@ describe('ImageUploadField', () => {
         label="Imagem de capa"
         onAltTextChange={vi.fn()}
         onChange={handleChange}
+        onUpload={mockUploadAdminMedia}
         value=""
       />,
     );
@@ -99,6 +96,7 @@ describe('ImageUploadField', () => {
         id="cover-image"
         label="Imagem de capa"
         onChange={vi.fn()}
+        onUpload={mockUploadAdminMedia}
         value=""
       />,
     );

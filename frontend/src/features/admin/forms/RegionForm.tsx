@@ -4,15 +4,17 @@ import { FormActions } from '../../../shared/components/form/FormActions';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { TextInput } from '../../../shared/components/form/TextInput';
 import { getApiErrorMessage, getApiValidationErrors } from '../../../shared/lib/api/getApiErrorMessage';
+import { adminButtonClassName } from '../components/adminUiStyles';
 import { useAdminRegionMutations } from '../hooks/useAdminRegions';
 import type { AdminFeedback, AdminValidationErrors, RegionFormValues } from '../types/admin';
 import { createEmptyRegionForm, mapRegionToFormValues } from '../types/admin';
 
 interface RegionFormProps {
   region?: RegionSummary | null;
+  onSuccess?: () => void;
 }
 
-export const RegionForm = ({ region }: RegionFormProps) => {
+export const RegionForm = ({ region, onSuccess }: RegionFormProps) => {
   const createInitialValues = () => (region ? mapRegionToFormValues(region) : createEmptyRegionForm());
   const [values, setValues] = useState<RegionFormValues>(createInitialValues);
   const [errors, setErrors] = useState<AdminValidationErrors>({});
@@ -56,6 +58,10 @@ export const RegionForm = ({ region }: RegionFormProps) => {
       if (!region) {
         setValues(createEmptyRegionForm());
       }
+      
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       const apiValidationErrors = getApiValidationErrors(error);
 
@@ -94,7 +100,7 @@ export const RegionForm = ({ region }: RegionFormProps) => {
 
       <FormActions>
         <button
-          className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+          className={adminButtonClassName.secondary}
           onClick={() => {
             setValues(createInitialValues());
             setErrors({});
@@ -105,7 +111,7 @@ export const RegionForm = ({ region }: RegionFormProps) => {
           Limpar
         </button>
         <button
-          className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+          className={adminButtonClassName.primary}
           disabled={isSubmitting}
           type="submit"
         >

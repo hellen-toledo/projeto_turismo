@@ -29,7 +29,6 @@ export interface CityFormValues {
   summary: string;
   description: string;
   coverImage: string;
-  coverImageAltText: string;
   regionId: string;
   isPublished: boolean;
   interestTagIds: string[];
@@ -44,7 +43,6 @@ export interface EventFormValues {
   startsAt: string;
   endsAt: string;
   coverImage: string;
-  coverImageAltText: string;
   externalUrl: string;
   cityId: string;
   isFeatured: boolean;
@@ -80,7 +78,6 @@ export const createEmptyCityForm = (): CityFormValues => ({
   summary: '',
   description: '',
   coverImage: '',
-  coverImageAltText: '',
   regionId: '',
   isPublished: false,
   interestTagIds: [],
@@ -104,7 +101,6 @@ export const createEmptyEventForm = (): EventFormValues => ({
   startsAt: '',
   endsAt: '',
   coverImage: '',
-  coverImageAltText: '',
   externalUrl: '',
   cityId: '',
   isFeatured: false,
@@ -119,7 +115,6 @@ export const mapCityToFormValues = (city: City): CityFormValues => ({
   summary: city.summary ?? '',
   description: city.description,
   coverImage: city.coverImage ?? '',
-  coverImageAltText: city.gallery?.find((item) => item.isCover)?.altText ?? '',
   regionId: city.region ? String(city.region.id) : '',
   isPublished: city.isPublished,
   interestTagIds: city.interestTags?.map((tag) => String(tag.id)) ?? [],
@@ -134,7 +129,6 @@ export const mapEventToFormValues = (event: Event): EventFormValues => ({
   startsAt: toDatetimeLocalValue(event.startsAt),
   endsAt: toDatetimeLocalValue(event.endsAt),
   coverImage: event.coverImage ?? '',
-  coverImageAltText: event.gallery?.find((item) => item.isCover)?.altText ?? '',
   externalUrl: event.externalUrl ?? '',
   cityId: event.city ? String(event.city.id) : '',
   isFeatured: event.isFeatured,

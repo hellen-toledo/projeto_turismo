@@ -6,7 +6,7 @@ import { ErrorState } from '../../../shared/components/ErrorState';
 import { LoadingState } from '../../../shared/components/LoadingState';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
-import { AdminDataTable, AdminKpi, AdminPage, AdminSearchToolbar, AdminSurface } from '../components/AdminUi';
+import { AdminDataTable, AdminKpi, AdminPage, AdminSearchToolbar, AdminSurface, AdminSideSheet } from '../components/AdminUi';
 import { adminButtonClassName, adminInputClassName } from '../components/adminUiStyles';
 import { InterestTagForm } from '../forms/InterestTagForm';
 import { useAdminInterestTagMutations, useAdminInterestTags } from '../hooks/useAdminInterestTags';
@@ -30,6 +30,7 @@ export const AdminInterestTagsPage = () => {
   const [selectedTag, setSelectedTag] = useState<InterestTag | null>(null);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const [search, setSearch] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const filteredTags = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -69,6 +70,7 @@ export const AdminInterestTagsPage = () => {
       });
 
       if (selectedTag?.id === tagId) {
+        setIsFormOpen(false);
         setSelectedTag(null);
       }
     } catch (error) {
@@ -79,15 +81,18 @@ export const AdminInterestTagsPage = () => {
     }
   };
 
+  const handleOpenForm = (tag: InterestTag | null = null) => {
+    setSelectedTag(tag);
+    setFeedback(null);
+    setIsFormOpen(true);
+  };
+
   return (
     <AdminPage
       actions={
         <button
           className={adminButtonClassName.primary}
-          onClick={() => {
-            setSelectedTag(null);
-            setFeedback(null);
-          }}
+          onClick={() => handleOpenForm(null)}
           type="button"
         >
           <Plus className="h-4 w-4" />
@@ -104,91 +109,87 @@ export const AdminInterestTagsPage = () => {
         <AdminKpi hint="Base disponível para classificação de eventos." icon={<PencilLine className="h-5 w-5" />} label="Com uso em eventos" value={(tags ?? []).filter((tag) => (tag.eventsCount ?? 0) > 0).length} />
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-        <AdminSurface
-          description="Mantenha as tags usadas na curadoria de cidades e eventos."
-          meta={selectedTag ? 'Edição ativa' : 'Novo cadastro'}
-          title="Nova tag"
-        >
+      <AdminSurface description="Busque por nome ou slug e revise o uso das tags na base." meta={`${filteredTags.length} itens`} title="Tags cadastradas">
+        <AdminSearchToolbar
+          searchInput={
+            <input
+              className={`${adminInputClassName} pl-10`}
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
+              placeholder="Buscar por nome ou slug..."
+              type="text"
+              value={search}
+            />
+          }
+        />
+
+        <div className="mt-6">
           <FormAlert feedback={feedback} />
+        </div>
 
-          <div className="mt-6">
-            <InterestTagForm key={selectedTag?.id ?? 'new-tag'} tag={selectedTag} />
-          </div>
-        </AdminSurface>
-
-        <AdminSurface description="Busque por nome ou slug e revise o uso das tags na base." meta={`${filteredTags.length} itens`} title="Tags cadastradas">
-          <AdminSearchToolbar
-            searchInput={
-              <input
-                className={`${adminInputClassName} pl-10`}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                }}
-                placeholder="Buscar por nome ou slug..."
-                type="text"
-                value={search}
+        <div className="mt-6">
+          <AdminDataTable
+            actions={(tag) => (
+              <div className="flex justify-end gap-2">
+                <button
+                  className={adminButtonClassName.secondary}
+                  onClick={() => handleOpenForm(tag)}
+                  type="button"
+                >
+                  <PencilLine className="h-4 w-4" />
+                  Editar
+                </button>
+                <button
+                  className={adminButtonClassName.danger}
+                  disabled={deleting}
+                  onClick={() => {
+                    void handleDelete(tag.id);
+                  }}
+                  type="button"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Excluir
+                </button>
+              </div>
+            )}
+            columns={[
+              {
+                key: 'name',
+                label: 'Tag',
+                render: (tag) => <p className="font-semibold text-slate-950">{tag.name}</p>,
+              },
+              {
+                key: 'slug',
+                label: 'Slug',
+                render: (tag) => tag.slug,
+              },
+              {
+                key: 'usage',
+                label: 'Uso',
+                render: (tag) => getTagUsageLabel(tag),
+              },
+            ]}
+            emptyState={
+              <EmptyState
+                description="Cadastre uma tag para ampliar a taxonomia editorial do portal."
+                title="Nenhuma tag cadastrada"
               />
             }
+            getRowKey={(tag) => tag.id}
+            rows={filteredTags}
           />
+        </div>
+      </AdminSurface>
 
-          <div className="mt-6">
-            <AdminDataTable
-              actions={(tag) => (
-                <div className="flex justify-end gap-2">
-                  <button
-                    className={adminButtonClassName.secondary}
-                    onClick={() => {
-                      setSelectedTag(tag);
-                      setFeedback(null);
-                    }}
-                    type="button"
-                  >
-                    <PencilLine className="h-4 w-4" />
-                    Editar
-                  </button>
-                  <button
-                    className={adminButtonClassName.danger}
-                    disabled={deleting}
-                    onClick={() => {
-                      void handleDelete(tag.id);
-                    }}
-                    type="button"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Excluir
-                  </button>
-                </div>
-              )}
-              columns={[
-                {
-                  key: 'name',
-                  label: 'Tag',
-                  render: (tag) => <p className="font-semibold text-slate-950">{tag.name}</p>,
-                },
-                {
-                  key: 'slug',
-                  label: 'Slug',
-                  render: (tag) => tag.slug,
-                },
-                {
-                  key: 'usage',
-                  label: 'Uso',
-                  render: (tag) => getTagUsageLabel(tag),
-                },
-              ]}
-              emptyState={
-                <EmptyState
-                  description="Cadastre uma tag para ampliar a taxonomia editorial do portal."
-                  title="Nenhuma tag cadastrada"
-                />
-              }
-              getRowKey={(tag) => tag.id}
-              rows={filteredTags}
-            />
-          </div>
-        </AdminSurface>
-      </div>
+      <AdminSideSheet
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        title={selectedTag ? 'Editar tag' : 'Nova tag'}
+        description="Mantenha as tags usadas na curadoria de cidades e eventos."
+      >
+        <InterestTagForm key={selectedTag?.id ?? 'new-tag'} tag={selectedTag} onSuccess={() => setIsFormOpen(false)} />
+      </AdminSideSheet>
     </AdminPage>
   );
 };

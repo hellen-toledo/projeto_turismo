@@ -10,9 +10,12 @@ import { TextInput } from '../../../shared/components/form/TextInput';
 import { TextareaField } from '../../../shared/components/form/TextareaField';
 import { ToggleField } from '../../../shared/components/form/ToggleField';
 import { getApiErrorMessage, getApiValidationErrors } from '../../../shared/lib/api/getApiErrorMessage';
+import { uploadAdminMedia } from '../api/adminMediaApi';
+import { adminButtonClassName } from '../components/adminUiStyles';
 import { useAdminEventMutations } from '../hooks/useAdminEvents';
-import type { AdminFeedback, AdminOption, AdminValidationErrors, CityGalleryItemFormValue, EventFormValues } from '../types/admin';
-import { createEmptyCityGalleryItem, createEmptyEventForm, mapEventToFormValues } from '../types/admin';
+import type { AdminFeedback, AdminOption, AdminValidationErrors, EventFormValues } from '../types/admin';
+import { createEmptyEventForm, mapEventToFormValues } from '../types/admin';
+import { useGalleryItems } from './useGalleryItems';
 import { validateEventForm } from './validators';
 
 interface EventFormProps {
@@ -20,11 +23,12 @@ interface EventFormProps {
   isLoadingEvent?: boolean;
   cityOptions: AdminOption[];
   tagOptions: AdminOption[];
+  onSuccess?: () => void;
 }
 
 const getNestedError = (errors: AdminValidationErrors, path: string) => errors[path];
 
-export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptions }: EventFormProps) => {
+export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptions, onSuccess }: EventFormProps) => {
   const createInitialValues = () => (event ? mapEventToFormValues(event) : createEmptyEventForm());
   const [values, setValues] = useState<EventFormValues>(createInitialValues);
   const [errors, setErrors] = useState<AdminValidationErrors>({});
@@ -40,12 +44,12 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
     }));
   };
 
-  const updateGalleryItem = (itemId: string, updater: (item: CityGalleryItemFormValue) => CityGalleryItemFormValue) => {
-    setFieldValue(
-      'gallery',
-      values.gallery.map((item) => (item.id === itemId ? updater(item) : item)),
-    );
-  };
+  const {
+    addGalleryItem,
+    markGalleryCover,
+    removeGalleryItem,
+    updateGalleryItem,
+  } = useGalleryItems(values.gallery, (gallery) => setFieldValue('gallery', gallery));
 
   const handleSubmit = async (submitEvent: React.FormEvent<HTMLFormElement>) => {
     submitEvent.preventDefault();
@@ -77,6 +81,10 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
       if (!event) {
         setValues(createEmptyEventForm());
       }
+
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       const apiValidationErrors = getApiValidationErrors(error);
       if (Object.keys(apiValidationErrors).length > 0) {
@@ -92,38 +100,6 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
         });
       }
     }
-  };
-
-  const addGalleryItem = () => {
-    setFieldValue('gallery', [...values.gallery, createEmptyCityGalleryItem(values.gallery.length)]);
-  };
-
-  const removeGalleryItem = (itemId: string) => {
-    const nextGallery = values.gallery.filter((item) => item.id !== itemId);
-    const normalizedGallery = nextGallery.map((item, index) => ({
-      ...item,
-      sortOrder: index,
-      isCover: nextGallery.length === 1 ? true : item.isCover,
-    }));
-
-    if (normalizedGallery.length > 0 && normalizedGallery.every((item) => !item.isCover)) {
-      normalizedGallery[0] = {
-        ...normalizedGallery[0],
-        isCover: true,
-      };
-    }
-
-    setFieldValue('gallery', normalizedGallery);
-  };
-
-  const markGalleryCover = (itemId: string) => {
-    setFieldValue(
-      'gallery',
-      values.gallery.map((item) => ({
-        ...item,
-        isCover: item.id === itemId,
-      })),
-    );
   };
 
   if (isLoadingEvent) {
@@ -219,17 +195,15 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
       />
 
       <ImageUploadField
-        altText={values.coverImageAltText}
         error={errors.coverImage}
         hint="Aceita URL manual ou upload real para o painel administrativo."
         id="event-cover-image"
         label="Imagem de capa"
-        onAltTextChange={(value) => {
-          setFieldValue('coverImageAltText', value);
-        }}
         onChange={(value) => {
           setFieldValue('coverImage', value);
         }}
+        onUpload={uploadAdminMedia}
+        showAltText={false}
         uploadCollection="cover"
         value={values.coverImage}
       />
@@ -301,6 +275,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
                       size: media.size,
                     }));
                   }}
+                  onUpload={uploadAdminMedia}
                   uploadCollection="gallery"
                   value={item.url}
                 />
@@ -372,7 +347,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
 
       <FormActions>
         <button
-          className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+          className={adminButtonClassName.secondary}
           onClick={() => {
             setValues(createInitialValues());
             setErrors({});
@@ -383,7 +358,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
           Limpar
         </button>
         <button
-          className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+          className={adminButtonClassName.primary}
           disabled={isSubmitting}
           type="submit"
         >

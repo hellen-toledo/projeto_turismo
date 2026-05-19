@@ -4,15 +4,17 @@ import { FormActions } from '../../../shared/components/form/FormActions';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { TextInput } from '../../../shared/components/form/TextInput';
 import { getApiErrorMessage, getApiValidationErrors } from '../../../shared/lib/api/getApiErrorMessage';
+import { adminButtonClassName } from '../components/adminUiStyles';
 import { useAdminInterestTagMutations } from '../hooks/useAdminInterestTags';
 import type { AdminFeedback, AdminValidationErrors, InterestTagFormValues } from '../types/admin';
 import { createEmptyInterestTagForm, mapInterestTagToFormValues } from '../types/admin';
 
 interface InterestTagFormProps {
   tag?: InterestTag | null;
+  onSuccess?: () => void;
 }
 
-export const InterestTagForm = ({ tag }: InterestTagFormProps) => {
+export const InterestTagForm = ({ tag, onSuccess }: InterestTagFormProps) => {
   const createInitialValues = () => (tag ? mapInterestTagToFormValues(tag) : createEmptyInterestTagForm());
   const [values, setValues] = useState<InterestTagFormValues>(createInitialValues);
   const [errors, setErrors] = useState<AdminValidationErrors>({});
@@ -55,6 +57,10 @@ export const InterestTagForm = ({ tag }: InterestTagFormProps) => {
 
       if (!tag) {
         setValues(createEmptyInterestTagForm());
+      }
+      
+      if (onSuccess) {
+        onSuccess();
       }
     } catch (error) {
       const apiValidationErrors = getApiValidationErrors(error);
@@ -111,7 +117,7 @@ export const InterestTagForm = ({ tag }: InterestTagFormProps) => {
 
       <FormActions>
         <button
-          className="rounded-full border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-50"
+          className={adminButtonClassName.secondary}
           onClick={() => {
             setValues(createInitialValues());
             setErrors({});
@@ -122,7 +128,7 @@ export const InterestTagForm = ({ tag }: InterestTagFormProps) => {
           Limpar
         </button>
         <button
-          className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+          className={adminButtonClassName.primary}
           disabled={isSubmitting}
           type="submit"
         >

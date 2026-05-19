@@ -6,7 +6,7 @@ import { ErrorState } from '../../../shared/components/ErrorState';
 import { LoadingState } from '../../../shared/components/LoadingState';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
-import { AdminDataTable, AdminKpi, AdminPage, AdminSearchToolbar, AdminSurface } from '../components/AdminUi';
+import { AdminDataTable, AdminKpi, AdminPage, AdminSearchToolbar, AdminSurface, AdminSideSheet } from '../components/AdminUi';
 import { adminButtonClassName, adminInputClassName } from '../components/adminUiStyles';
 import { RegionForm } from '../forms/RegionForm';
 import { useAdminRegionMutations, useAdminRegions } from '../hooks/useAdminRegions';
@@ -18,6 +18,7 @@ export const AdminRegionsPage = () => {
   const [selectedRegion, setSelectedRegion] = useState<RegionSummary | null>(null);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const [search, setSearch] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const filteredRegions = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -59,6 +60,7 @@ export const AdminRegionsPage = () => {
       });
 
       if (selectedRegion?.id === regionId) {
+        setIsFormOpen(false);
         setSelectedRegion(null);
       }
     } catch (error) {
@@ -69,15 +71,18 @@ export const AdminRegionsPage = () => {
     }
   };
 
+  const handleOpenForm = (region: RegionSummary | null = null) => {
+    setSelectedRegion(region);
+    setFeedback(null);
+    setIsFormOpen(true);
+  };
+
   return (
     <AdminPage
       actions={
         <button
           className={adminButtonClassName.primary}
-          onClick={() => {
-            setSelectedRegion(null);
-            setFeedback(null);
-          }}
+          onClick={() => handleOpenForm(null)}
           type="button"
         >
           <Plus className="h-4 w-4" />
@@ -94,92 +99,89 @@ export const AdminRegionsPage = () => {
         <AdminKpi hint="Use a edição para revisar nomes e agrupamentos." icon={<PencilLine className="h-5 w-5" />} label="Base territorial" value="Ativa" />
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[0.92fr_1.08fr]">
-        <AdminSurface
-          description="Cadastre e mantenha a divisão regional usada nas cidades."
-          meta={selectedRegion ? 'Edição ativa' : 'Novo cadastro'}
-          title="Nova região"
-        >
+      <AdminSurface description="Busque regiões por nome e revise os vínculos existentes." meta={`${filteredRegions.length} itens`} title="Regiões cadastradas">
+        <AdminSearchToolbar
+          searchInput={
+            <input
+              className={`${adminInputClassName} pl-10`}
+              onChange={(event) => {
+                setSearch(event.target.value);
+              }}
+              placeholder="Buscar por nome da região..."
+              type="text"
+              value={search}
+            />
+          }
+        />
+
+        <div className="mt-6">
           <FormAlert feedback={feedback} />
+        </div>
 
-          <div className="mt-6">
-            <RegionForm key={selectedRegion?.id ?? 'new-region'} region={selectedRegion} />
-          </div>
-        </AdminSurface>
-
-        <AdminSurface description="Busque regiões por nome e revise os vínculos existentes." meta={`${filteredRegions.length} itens`} title="Regiões cadastradas">
-          <AdminSearchToolbar
-            searchInput={
-              <input
-                className={`${adminInputClassName} pl-10`}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                }}
-                placeholder="Buscar por nome da região..."
-                type="text"
-                value={search}
+        <div className="mt-6">
+          <AdminDataTable
+            actions={(region) => (
+              <div className="flex justify-end gap-2">
+                <button
+                  className={adminButtonClassName.secondary}
+                  onClick={() => handleOpenForm(region)}
+                  type="button"
+                >
+                  <PencilLine className="h-4 w-4" />
+                  Editar
+                </button>
+                <button
+                  className={adminButtonClassName.danger}
+                  disabled={deleting}
+                  onClick={() => {
+                    void handleDelete(region.id);
+                  }}
+                  type="button"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Excluir
+                </button>
+              </div>
+            )}
+            columns={[
+              {
+                key: 'name',
+                label: 'Região',
+                render: (region) => <p className="font-semibold text-slate-950">{region.name}</p>,
+              },
+              {
+                key: 'citiesCount',
+                label: 'Cidades',
+                render: (region) => region.citiesCount ?? 'Indisponível',
+              },
+              {
+                key: 'summary',
+                label: 'Observação',
+                render: (region) =>
+                  region.citiesCount !== undefined ? `${region.citiesCount} cidades vinculadas` : 'Contagem não enviada pela API',
+              },
+            ]}
+            emptyState={
+              <EmptyState
+                description="Cadastre uma região ou rota turística para organizar melhor as cidades do portal."
+                title="Nenhuma região cadastrada"
               />
             }
+            getRowKey={(region) => region.id}
+            rows={filteredRegions}
           />
+        </div>
+      </AdminSurface>
 
-          <div className="mt-6">
-            <AdminDataTable
-              actions={(region) => (
-                <div className="flex justify-end gap-2">
-                  <button
-                    className={adminButtonClassName.secondary}
-                    onClick={() => {
-                      setSelectedRegion(region);
-                      setFeedback(null);
-                    }}
-                    type="button"
-                  >
-                    <PencilLine className="h-4 w-4" />
-                    Editar
-                  </button>
-                  <button
-                    className={adminButtonClassName.danger}
-                    disabled={deleting}
-                    onClick={() => {
-                      void handleDelete(region.id);
-                    }}
-                    type="button"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Excluir
-                  </button>
-                </div>
-              )}
-              columns={[
-                {
-                  key: 'name',
-                  label: 'Região',
-                  render: (region) => <p className="font-semibold text-slate-950">{region.name}</p>,
-                },
-                {
-                  key: 'citiesCount',
-                  label: 'Cidades',
-                  render: (region) => region.citiesCount ?? 'Indisponível',
-                },
-                {
-                  key: 'summary',
-                  label: 'Observação',
-                  render: (region) =>
-                    region.citiesCount !== undefined ? `${region.citiesCount} cidades vinculadas` : 'Contagem não enviada pela API',
-                },
-              ]}
-              emptyState={
-                <EmptyState
-                  description="Cadastre uma região ou rota turística para organizar melhor as cidades do portal."
-                  title="Nenhuma região cadastrada"
-                />
-              }
-              getRowKey={(region) => region.id}
-              rows={filteredRegions}
-            />
-          </div>
-        </AdminSurface>
-      </div>
+      <AdminSideSheet
+        isOpen={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        title={selectedRegion ? 'Editar região' : 'Nova região'}
+        description="Cadastre e mantenha a divisão regional usada nas cidades."
+      >
+        <RegionForm key={selectedRegion?.id ?? 'new-region'} region={selectedRegion} onSuccess={() => setIsFormOpen(false)} />
+      </AdminSideSheet>
     </AdminPage>
   );
 };
+

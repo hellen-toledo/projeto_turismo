@@ -1,4 +1,4 @@
-import { CalendarRange, CheckCheck, Clock3, Images, MapPinned, Shapes, Shield, Sparkles, Waypoints } from 'lucide-react';
+import { CalendarRange, Clock3, Images, MapPinned, Shapes, Shield, Waypoints } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { AdminDataTable, AdminKpi, AdminPage, AdminStatusBadge, AdminSurface } from '../components/AdminUi';
@@ -7,13 +7,6 @@ import { useAdminCities } from '../hooks/useAdminCities';
 import { useAdminEvents } from '../hooks/useAdminEvents';
 import { useAdminInterestTags } from '../hooks/useAdminInterestTags';
 import { useAdminRegions } from '../hooks/useAdminRegions';
-
-const checklistItems = [
-  'Validar data, local e responsável pelo evento.',
-  'Conferir cidade, região e taxonomia aplicada.',
-  'Selecionar imagem de capa em boa resolução.',
-  'Revisar descrição, links e informações úteis.',
-];
 
 export const AdminHomePage = () => {
   const { data: eventsResponse, isLoading: loadingEvents, isError: eventsError } = useAdminEvents({ perPage: 6 });
@@ -70,7 +63,7 @@ export const AdminHomePage = () => {
         <AdminKpi hint="Vocabulário editorial disponível para classificação." icon={<Shapes className="h-5 w-5" />} label="Tags cadastradas" value={totalTags} />
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-3">
+      <div className="grid gap-5">
         <AdminSurface
           actions={
             <Link className={adminButtonClassName.secondary} to="/admin/events">
@@ -113,32 +106,11 @@ export const AdminHomePage = () => {
             rows={highlightedEvents ? featuredEvents : events.slice(0, 3)}
           />
         </AdminSurface>
-
-        <section className="rounded-3xl border border-slate-950 bg-slate-950 p-5 text-white shadow-sm xl:col-span-1">
-          <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-white/10 p-3">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold">Checklist editorial</h2>
-              <p className="text-sm text-slate-300">Antes de publicar novos conteúdos.</p>
-            </div>
-          </div>
-
-          <div className="mt-6 space-y-4">
-            {checklistItems.map((item) => (
-              <div key={item} className="flex gap-3">
-                <CheckCheck className="mt-0.5 h-5 w-5 flex-none text-emerald-300" />
-                <p className="text-sm leading-6 text-slate-200">{item}</p>
-              </div>
-            ))}
-          </div>
-        </section>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700 w-fit">
+          <div className="rounded-2xl bg-slate-50 p-3 text-emerald-700 w-fit">
             <Images className="h-5 w-5" />
           </div>
           <h2 className="mt-4 text-lg font-semibold text-slate-950">Biblioteca visual</h2>
@@ -148,7 +120,7 @@ export const AdminHomePage = () => {
           </Link>
         </div>
         <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700 w-fit">
+          <div className="rounded-2xl bg-slate-50 p-3 text-emerald-700 w-fit">
             <Clock3 className="h-5 w-5" />
           </div>
           <h2 className="mt-4 text-lg font-semibold text-slate-950">Curadoria contínua</h2>
@@ -157,7 +129,7 @@ export const AdminHomePage = () => {
             Revisar agenda
           </Link>
         </div>
-        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/80 p-5 shadow-sm">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-start gap-3">
             <Shield className="mt-0.5 h-5 w-5 text-emerald-700" />
             <div>
