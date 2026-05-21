@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Landmark, LockKeyhole, LogIn, Mail } from 'lucide-react';
+import { Eye, EyeOff, Landmark, LockKeyhole, LogIn, Mail, MailWarning, X } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
@@ -25,6 +25,7 @@ export const AdminLoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPasswordRecoveryNoticeOpen, setIsPasswordRecoveryNoticeOpen] = useState(false);
 
   if (isAuthenticated) {
     return <Navigate replace to="/admin" />;
@@ -59,24 +60,20 @@ export const AdminLoginPage = () => {
   };
 
   return (
-    <div className="admin-login-shell flex min-h-screen items-center justify-center bg-[#fbfdfc] px-6 py-10 text-slate-950">
-      <section className="w-full max-w-[30.5rem] rounded-2xl border border-slate-200 bg-white px-8 py-10 shadow-[0_22px_55px_rgba(15,23,42,0.12)] sm:px-11 sm:py-12">
-        <div className="flex items-center justify-center gap-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
+    <div
+      className="admin-login-shell relative flex min-h-screen items-center justify-center overflow-hidden bg-emerald-950 bg-cover bg-center px-6 py-10 text-slate-950"
+      style={{ backgroundImage: "url('/imagemFundoLogin.jpeg')" }}
+    >
+      <div className="absolute inset-0 bg-white/25 backdrop-blur-[1px]" />
+      <section className="relative w-full max-w-[27rem] rounded-3xl border border-white/60 bg-white/60 px-7 py-8 shadow-[0_22px_55px_rgba(15,23,42,0.18)] backdrop-blur-md sm:px-9 sm:py-10">
+        <div className="relative flex items-center justify-center">
+          <div className="absolute left-1/2 flex h-11 w-11 -translate-x-[5.25rem] items-center justify-center rounded-md bg-emerald-600 text-white shadow-sm">
             <Landmark className="h-5 w-5" />
           </div>
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Turismo</p>
-            <p className="text-base font-bold text-slate-950">Norte-Goiano</p>
-          </div>
+          <h1 className="text-[1.65rem] font-bold tracking-tight text-emerald-600">Login</h1>
         </div>
 
-        <div className="mt-9 text-center">
-          <h1 className="text-[1.65rem] font-bold tracking-tight text-slate-950">Acesse sua conta</h1>
-          <p className="mx-auto mt-4 max-w-[19rem] text-sm leading-6 text-slate-500">Entre para gerenciar eventos, cidades e regiões do portal.</p>
-        </div>
-
-        <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+        <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
           <FormAlert feedback={feedback} />
 
           <label className="block text-sm font-semibold text-slate-900" htmlFor="admin-email">
@@ -135,13 +132,17 @@ export const AdminLoginPage = () => {
               />
               Lembrar-me
             </label>
-            <a className="font-semibold text-teal-700 transition hover:text-teal-800" href="mailto:suporte@turismonortegoiano.local?subject=Recuperar%20senha%20administrativa">
+            <button
+              className="font-semibold text-teal-700 transition hover:text-teal-800"
+              onClick={() => setIsPasswordRecoveryNoticeOpen(true)}
+              type="button"
+            >
               Esqueci minha senha
-            </a>
+            </button>
           </div>
 
           <button
-            className="inline-flex h-[3.25rem] w-full items-center justify-center gap-2 rounded-lg bg-teal-700 px-5 py-4 text-sm font-semibold text-white shadow-lg shadow-teal-900/15 transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-teal-300"
+            className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-emerald-600 px-5 text-sm font-semibold text-white shadow-lg shadow-emerald-900/15 transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
             disabled={isSubmitting}
             type="submit"
           >
@@ -150,6 +151,52 @@ export const AdminLoginPage = () => {
           </button>
         </form>
       </section>
+
+      {isPasswordRecoveryNoticeOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+          <button
+            aria-label="Fechar aviso"
+            className="absolute inset-0 bg-slate-950/35 backdrop-blur-sm"
+            onClick={() => setIsPasswordRecoveryNoticeOpen(false)}
+            type="button"
+          />
+          <section
+            aria-labelledby="password-recovery-notice-title"
+            aria-modal="true"
+            className="relative w-full max-w-sm rounded-lg border border-slate-200 bg-white p-6 text-slate-950 shadow-2xl"
+            role="dialog"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-teal-50 text-teal-700">
+                <MailWarning className="h-5 w-5" />
+              </div>
+              <button
+                aria-label="Fechar aviso"
+                className="rounded-md p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                onClick={() => setIsPasswordRecoveryNoticeOpen(false)}
+                type="button"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <h2 className="text-lg font-semibold text-slate-950" id="password-recovery-notice-title">
+                Recuperação indisponível
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Essa funcionalidade só será possível ao implementar um servidor de email.</p>
+            </div>
+
+            <button
+              className="mt-6 inline-flex h-10 w-full items-center justify-center rounded-md bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-800"
+              onClick={() => setIsPasswordRecoveryNoticeOpen(false)}
+              type="button"
+            >
+              Entendi
+            </button>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 };

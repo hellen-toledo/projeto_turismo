@@ -1,3 +1,5 @@
+import { CalendarDays, MapPinned } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { CityCard } from '../features/cities/components/CityCard';
 import { useCities } from '../features/cities/hooks/useCities';
 import { EventCard } from '../features/events/components/EventCard';
@@ -30,10 +32,10 @@ export const HomePage = () => {
     <>
       <HeroSection />
 
-      <section className="mb-20">
+      <section className="mb-24">
         <SectionHeader
-          title="Destinos por Região"
-          description="Explore as cidades divididas pelas principais rotas turísticas."
+          title="Cidades"
+          description="Norte Goiano: venha conhecer nossas cidades."
           actionLabel="Ver todas as cidades"
           actionTo="/cidades"
         />
@@ -48,18 +50,29 @@ export const HomePage = () => {
             actionTo="/eventos"
           />
         ) : cities.length ? (
-          <div className="space-y-12">
-            {Object.entries(citiesByRegion).map(([region, regionCities]) => (
-              <div key={region}>
-                <h3 className="text-2xl font-bold text-white mb-6 border-b border-gray-800 pb-2">{region}</h3>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                  {regionCities.map((city) => (
-                    <CityCard key={city.id} city={city} />
-                  ))}
+          <>
+            <div className="space-y-12">
+              {Object.entries(citiesByRegion).map(([region, regionCities]) => (
+                <div key={region}>
+                  <h3 className="mb-6 inline-block border-b-4 border-emerald-500 pb-2 text-2xl font-bold text-white">{region}</h3>
+                  <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    {regionCities.map((city) => (
+                      <CityCard key={city.id} city={city} />
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            <div className="mt-10 flex justify-center">
+              <Link
+                to="/cidades"
+                className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-emerald-600 px-5 text-sm font-bold text-white transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+              >
+                <MapPinned className="h-4 w-4" />
+                Visualizar todas as cidades
+              </Link>
+            </div>
+          </>
         ) : (
           <EmptyState
             title="Nenhuma cidade publicada"
@@ -69,9 +82,10 @@ export const HomePage = () => {
       </section>
 
       <section className="mb-20">
-        <div className="rounded-3xl border border-gray-800 bg-gray-900/50 p-8 md:p-12 shadow-sm">
+        <div>
           <SectionHeader
-            title="Próximos Eventos"
+            title="Eventos"
+            description="Venha conhecer nossos eventos."
             actionLabel="Ver agenda completa"
             actionTo="/eventos"
           />
@@ -86,11 +100,22 @@ export const HomePage = () => {
               actionTo="/cidades"
             />
           ) : upcomingEvents.length ? (
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {upcomingEvents.map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {upcomingEvents.map((event) => (
+                  <EventCard key={event.id} event={event} />
+                ))}
+              </div>
+              <div className="mt-10 flex justify-center">
+                <Link
+                  to="/eventos"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-md bg-emerald-600 px-5 text-sm font-bold text-white transition hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  Visualizar todos os eventos
+                </Link>
+              </div>
+            </>
           ) : (
             <EmptyState
               title="Nenhum evento disponível"

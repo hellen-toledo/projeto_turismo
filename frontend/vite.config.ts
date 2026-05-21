@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 
-const backendTarget = process.env.VITE_BACKEND_URL || 'http://127.0.0.1:80';
+const backendTarget = process.env.VITE_BACKEND_URL || 'http://localhost:8000';
 const proxy = {
   '/api': {
     target: backendTarget,

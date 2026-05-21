@@ -59,6 +59,8 @@ describe('HomePage', () => {
 
     expect(screen.getByText('Nenhuma cidade publicada')).toBeInTheDocument();
     expect(screen.getByText('Nenhum evento disponível')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Visualizar todas as cidades' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Visualizar todos os eventos' })).not.toBeInTheDocument();
   });
 
   it('renders featured cities and upcoming events from the query data', () => {
@@ -88,6 +90,8 @@ describe('HomePage', () => {
     expect(screen.getByRole('link', { name: /Destino: Sao Jorge/i })).toHaveAttribute('href', '/cidades/sao-jorge');
     expect(screen.getByText('Festival do Lago')).toBeInTheDocument();
     expect(screen.getByText('Circuito do Cerrado')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Visualizar todas as cidades' })).toHaveAttribute('href', '/cidades');
+    expect(screen.getByRole('link', { name: 'Visualizar todos os eventos' })).toHaveAttribute('href', '/eventos');
     expect(screen.getByRole('link', { name: 'Ver todas as cidades' })).toHaveAttribute('href', '/cidades');
     expect(screen.getByRole('link', { name: 'Ver agenda completa' })).toHaveAttribute('href', '/eventos');
   });

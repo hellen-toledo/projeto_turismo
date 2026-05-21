@@ -3,6 +3,74 @@
 @tailwind utilities;
 
 @layer components {
+  .admin-shell {
+    isolation: isolate;
+    position: relative;
+  }
+
+  .admin-shell::before {
+    background-color: transparent;
+    content: '';
+    inset: 0;
+    pointer-events: none;
+    position: fixed;
+    transition: background-color 300ms ease-in-out;
+    z-index: 0;
+  }
+
+  .admin-light::before {
+    background-color: rgb(15 23 42 / 0.16);
+  }
+
+  .admin-light .empty-state-card {
+    background-color: rgb(248 250 252 / 0.82);
+    border-color: rgb(203 213 225);
+  }
+
+  .admin-light .empty-state-icon {
+    color: rgb(100 116 139);
+  }
+
+  .admin-light .empty-state-title {
+    color: rgb(15 23 42);
+  }
+
+  .admin-light .empty-state-description {
+    color: rgb(71 85 105);
+  }
+
+  .admin-light .pagination-button:disabled {
+    background-color: rgb(226 232 240);
+    color: rgb(100 116 139);
+  }
+
+  .admin-light .pagination-label {
+    background-color: rgb(241 245 249);
+    color: rgb(51 65 85);
+  }
+
+  .admin-modal-layer {
+    background-color: rgb(15 23 42 / 0.38);
+  }
+
+  .admin-modal-body {
+    scrollbar-color: rgb(148 163 184) rgb(241 245 249);
+  }
+
+  .admin-modal-body::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .admin-modal-body::-webkit-scrollbar-track {
+    background-color: rgb(241 245 249);
+  }
+
+  .admin-modal-body::-webkit-scrollbar-thumb {
+    background-color: rgb(148 163 184);
+    border: 2px solid rgb(241 245 249);
+    border-radius: 999px;
+  }
+
   .admin-dark .bg-white,
   .admin-dark .bg-white\/95,
   .admin-dark .bg-slate-50,
@@ -44,6 +112,43 @@
   .admin-dark .text-emerald-800,
   .admin-dark .text-teal-800 {
     color: rgb(94 234 212);
+  }
+
+  .admin-dark .admin-modal-layer {
+    background-color: rgb(2 6 23 / 0.74);
+  }
+
+  .admin-dark .admin-modal-card {
+    background-color: rgb(15 23 42);
+  }
+
+  .admin-dark .pagination-button:disabled {
+    background-color: rgb(30 41 59);
+    color: rgb(100 116 139);
+  }
+
+  .admin-dark .pagination-label {
+    background-color: rgb(30 41 59);
+    color: rgb(203 213 225);
+  }
+
+  .admin-dark .admin-date-input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.9;
+  }
+
+  .admin-dark .admin-modal-body {
+    background-color: rgb(15 23 42);
+    scrollbar-color: rgb(71 85 105) rgb(15 23 42);
+  }
+
+  .admin-dark .admin-modal-body::-webkit-scrollbar-track {
+    background-color: rgb(15 23 42);
+  }
+
+  .admin-dark .admin-modal-body::-webkit-scrollbar-thumb {
+    background-color: rgb(71 85 105);
+    border-color: rgb(15 23 42);
   }
 
   .admin-dark .shadow-sm,

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { resolveAssetUrl } from '../../../shared/lib/api/resolveAssetUrl';
 import type { Event } from '../../../shared/types/api';
 
 interface EventDetailsContentProps {
@@ -13,6 +14,7 @@ const formatDateTime = (value: string) =>
 
 export const EventDetailsContent = ({ event }: EventDetailsContentProps) => {
   const gallery = event.gallery ?? [];
+  const coverImage = resolveAssetUrl(event.coverImage);
 
   return (
     <article className="mx-auto max-w-7xl p-4 md:p-8">
@@ -26,7 +28,7 @@ export const EventDetailsContent = ({ event }: EventDetailsContentProps) => {
 
       <section className="mb-8">
         <img
-          src={event.coverImage ?? 'https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=1200&auto=format&fit=crop'}
+          src={coverImage ?? 'https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=1200&auto=format&fit=crop'}
           alt={event.coverImage ? `Imagem de capa do evento ${event.title}` : `Imagem ilustrativa do evento ${event.title}`}
           className="h-[300px] w-full rounded-2xl object-cover shadow-lg md:h-[500px]"
         />
@@ -93,7 +95,7 @@ export const EventDetailsContent = ({ event }: EventDetailsContentProps) => {
             {gallery.map((image, index) => (
               <figure key={image.id} className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/70">
                 <img
-                  src={image.url}
+                  src={resolveAssetUrl(image.url) ?? image.url}
                   alt={image.altText?.trim() || `Imagem ${index + 1} da galeria do evento ${event.title}`}
                   className="h-60 w-full object-cover"
                 />

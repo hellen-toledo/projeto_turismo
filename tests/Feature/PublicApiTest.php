@@ -139,6 +139,16 @@ class PublicApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.slug', 'minacu');
+
+        $this->getJson('/api/v1/cities?tag=eco')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'alto-paraiso-de-goias');
+
+        $this->getJson('/api/v1/cities?tag=nautico')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'minacu');
     }
 
     public function test_cities_endpoint_supports_basic_region_filters(): void
@@ -165,6 +175,16 @@ class PublicApiTest extends TestCase
             ->assertJsonPath('data.0.slug', 'sao-jorge');
 
         $this->getJson('/api/v1/cities?region=Serra%20da%20Mesa')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'minacu');
+
+        $this->getJson('/api/v1/cities?region=Chapada')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'sao-jorge');
+
+        $this->getJson('/api/v1/cities?region=Mesa')
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.slug', 'minacu');
@@ -233,6 +253,25 @@ class PublicApiTest extends TestCase
     public function test_city_show_endpoint_returns_not_found_for_unknown_slug(): void
     {
         $this->getJson('/api/v1/cities/inexistente')
+            ->assertNotFound()
+            ->assertExactJson([
+                'message' => 'Resource not found.',
+            ]);
+    }
+
+    public function test_city_show_endpoint_does_not_expose_unpublished_city(): void
+    {
+        $city = City::factory()->unpublished()->create([
+            'slug' => 'cidade-rascunho',
+        ]);
+
+        $this->getJson('/api/v1/cities/cidade-rascunho')
+            ->assertNotFound()
+            ->assertExactJson([
+                'message' => 'Resource not found.',
+            ]);
+
+        $this->getJson("/api/v1/cities/{$city->id}")
             ->assertNotFound()
             ->assertExactJson([
                 'message' => 'Resource not found.',
@@ -312,6 +351,16 @@ class PublicApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.slug', 'circuito-de-trilhas');
+
+        $this->getJson('/api/v1/events?city=jorge&tag=trilh')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'circuito-de-trilhas');
+
+        $this->getJson('/api/v1/events?city=mina&tag=naut')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.slug', 'festival-do-lago');
     }
 
     public function test_events_endpoint_supports_basic_filters(): void
@@ -393,6 +442,25 @@ class PublicApiTest extends TestCase
     public function test_event_show_endpoint_returns_not_found_for_unknown_slug(): void
     {
         $this->getJson('/api/v1/events/inexistente')
+            ->assertNotFound()
+            ->assertExactJson([
+                'message' => 'Resource not found.',
+            ]);
+    }
+
+    public function test_event_show_endpoint_does_not_expose_unpublished_event(): void
+    {
+        $event = Event::factory()->unpublished()->create([
+            'slug' => 'evento-rascunho',
+        ]);
+
+        $this->getJson('/api/v1/events/evento-rascunho')
+            ->assertNotFound()
+            ->assertExactJson([
+                'message' => 'Resource not found.',
+            ]);
+
+        $this->getJson("/api/v1/events/{$event->id}")
             ->assertNotFound()
             ->assertExactJson([
                 'message' => 'Resource not found.',

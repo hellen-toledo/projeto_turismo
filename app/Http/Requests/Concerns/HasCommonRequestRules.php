@@ -35,6 +35,26 @@ trait HasCommonRequestRules
         ];
     }
 
+    protected function coverImageRules(): array
+    {
+        return [
+            'nullable',
+            'string',
+            'max:2048',
+            function (string $attribute, mixed $value, \Closure $fail): void {
+                if (! is_string($value) || $value === '') {
+                    return;
+                }
+
+                if (filter_var($value, FILTER_VALIDATE_URL) || str_starts_with($value, '/storage/tourism/media/')) {
+                    return;
+                }
+
+                $fail('O campo imagem de capa deve ser uma URL válida.');
+            },
+        ];
+    }
+
     protected function mediaCollectionRules(): array
     {
         return [

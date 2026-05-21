@@ -1,12 +1,11 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AdminCitiesPage } from '../AdminCitiesPage';
 import { renderWithProviders } from '../../../../test/utils';
 
-const { mockDeleteCity, mockConfirm } = vi.hoisted(() => ({
+const { mockDeleteCity } = vi.hoisted(() => ({
   mockDeleteCity: vi.fn(),
-  mockConfirm: vi.fn(),
 }));
 
 vi.mock('../../hooks/useAdminCities', () => ({
@@ -74,19 +73,18 @@ describe('AdminCitiesPage', () => {
   beforeEach(() => {
     mockDeleteCity.mockReset();
     mockDeleteCity.mockResolvedValue(undefined);
-    mockConfirm.mockReset();
-    vi.stubGlobal('confirm', mockConfirm);
   });
 
   it('confirma antes de excluir a cidade', async () => {
     const user = userEvent.setup();
-    mockConfirm.mockReturnValue(true);
 
     renderWithProviders(<AdminCitiesPage />);
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    const dialog = screen.getByRole('dialog');
 
-    expect(mockConfirm).toHaveBeenCalled();
+    expect(within(dialog).getByText('Excluir cidade?')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }));
 
     await waitFor(() => {
       expect(mockDeleteCity).toHaveBeenCalledWith(1);
@@ -95,13 +93,12 @@ describe('AdminCitiesPage', () => {
 
   it('não exclui quando a confirmação é cancelada', async () => {
     const user = userEvent.setup();
-    mockConfirm.mockReturnValue(false);
 
     renderWithProviders(<AdminCitiesPage />);
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
 
-    expect(mockConfirm).toHaveBeenCalled();
     expect(mockDeleteCity).not.toHaveBeenCalled();
   });
 });

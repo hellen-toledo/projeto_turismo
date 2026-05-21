@@ -1,4 +1,4 @@
-import { PencilLine, Plus, Star, Trash2 } from 'lucide-react';
+import { CalendarRange, Eye, PencilLine, Plus, Star, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { EmptyState } from '../../../shared/components/EmptyState';
@@ -6,8 +6,9 @@ import { ErrorState } from '../../../shared/components/ErrorState';
 import { LoadingState } from '../../../shared/components/LoadingState';
 import { PaginationControls } from '../../../shared/components/PaginationControls';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
+import { useToast } from '../../../shared/components/toast/toastContext';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
-import { AdminDataTable, AdminPage, AdminSearchToolbar, AdminSelectFilter, AdminStatusBadge, AdminSurface, AdminSideSheet } from '../components/AdminUi';
+import { AdminConfirmDialog, AdminDataTable, AdminKpi, AdminPage, AdminSearchToolbar, AdminSelectFilter, AdminStatusBadge, AdminSurface, AdminSideSheet } from '../components/AdminUi';
 import { adminButtonClassName, adminInputClassName } from '../components/adminUiStyles';
 import { EventForm } from '../forms/EventForm';
 import { useAdminCities } from '../hooks/useAdminCities';
@@ -42,46 +43,56 @@ export const AdminEventsPage = () => {
   const { deleteEvent, deleting } = useAdminEventMutations();
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const { data: selectedEvent, isLoading: loadingSelectedEvent } = useAdminEvent(selectedEventId);
+  const [pendingDeleteEventId, setPendingDeleteEventId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const { showToast } = useToast();
 
   const events = eventsResponse?.data ?? [];
   const cities = citiesResponse?.data ?? [];
+  const publishedCount = events.filter((event) => event.isPublished).length;
+  const featuredCount = events.filter((event) => event.isFeatured).length;
+
   if (loadingEvents || loadingCities || loadingTags) {
-    return <LoadingState label="Carregando base administrativa de eventos..." />;
+    return <LoadingState label="Carregando eventos..." />;
   }
 
   if (eventsError || citiesError || tagsError) {
     return (
       <ErrorState
-        description="Verifique a autenticação administrativa e a disponibilidade da API."
+        description="Tente novamente em instantes ou verifique seu acesso ao painel."
         title="Não foi possível carregar o módulo de eventos"
       />
     );
   }
 
   const handleDelete = async (eventId: number) => {
-    const confirmed = window.confirm('Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.');
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
       await deleteEvent(eventId);
       setFeedback({
         type: 'success',
         message: 'Evento removido com sucesso.',
       });
+      showToast({
+        type: 'success',
+        title: 'Evento removido com sucesso.',
+      });
+      setPendingDeleteEventId(null);
 
       if (selectedEventId === eventId) {
         setIsFormOpen(false);
         setSelectedEventId(null);
       }
     } catch (error) {
+      const message = getApiErrorMessage(error, 'Falha ao remover o evento.');
       setFeedback({
         type: 'error',
-        message: getApiErrorMessage(error, 'Falha ao remover o evento.'),
+        message,
+      });
+      showToast({
+        type: 'error',
+        title: 'Não foi possível remover',
+        message,
       });
     }
   };
@@ -96,18 +107,24 @@ export const AdminEventsPage = () => {
     <AdminPage
       actions={
         <button
-          className={adminButtonClassName.primary}
+          className={adminButtonClassName.primaryAction}
           onClick={() => handleOpenForm(null)}
           type="button"
         >
-          <Plus className="h-5 w-5" />
-          Novo Evento
+          <Plus className="h-4 w-4" />
+          Novo evento
         </button>
       }
       description="Filtre a agenda, revise os estados de publicação e abra um item para edição."
       eyebrow="Gestão de eventos"
-      title="Listagem de Eventos"
+      title="Eventos"
     >
+      <section className="grid gap-4 md:grid-cols-3">
+        <AdminKpi hint="Total de eventos encontrados." icon={<CalendarRange className="h-5 w-5" />} label="Eventos carregados" value={eventsResponse?.meta.total ?? 0} />
+        <AdminKpi hint="Eventos visíveis na agenda pública." icon={<Eye className="h-5 w-5" />} label="Publicados" value={publishedCount} />
+        <AdminKpi hint="Eventos marcados para destaque." icon={<Star className="h-5 w-5" />} label="Em destaque" value={featuredCount} />
+      </section>
+
       <AdminSurface
         meta={`${eventsResponse?.meta.total ?? 0} itens`}
         title="Eventos cadastrados"
@@ -146,7 +163,7 @@ export const AdminEventsPage = () => {
         >
           <AdminSearchToolbar
             filterInput={
-              <div className="flex flex-wrap gap-2">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
                 <AdminSelectFilter defaultValue={searchParams.get('published') ?? ''} name="published" options={publishedOptions} />
                 <AdminSelectFilter defaultValue={searchParams.get('featured') ?? ''} name="featured" options={featuredOptions} />
                 <button className={adminButtonClassName.primary} type="submit">
@@ -173,9 +190,9 @@ export const AdminEventsPage = () => {
         <div className="mt-6">
           <AdminDataTable
             actions={(event) => (
-              <div className="flex justify-end gap-2">
+              <div className="flex min-w-max items-center justify-end gap-2">
                 <button
-                  className={adminButtonClassName.secondary}
+                  className={`${adminButtonClassName.secondary} min-w-24`}
                   onClick={() => handleOpenForm(event.id)}
                   type="button"
                 >
@@ -183,10 +200,10 @@ export const AdminEventsPage = () => {
                   Editar
                 </button>
                 <button
-                  className={adminButtonClassName.danger}
+                  className={`${adminButtonClassName.danger} min-w-24`}
                   disabled={deleting}
                   onClick={() => {
-                    void handleDelete(event.id);
+                    setPendingDeleteEventId(event.id);
                   }}
                   type="button"
                 >
@@ -225,7 +242,7 @@ export const AdminEventsPage = () => {
                 key: 'status',
                 label: 'Status',
                 render: (event) => (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     {getEventDisplayStatus(event).map((status) => (
                       <AdminStatusBadge key={`${event.id}-${status}`} status={status} />
                     ))}
@@ -259,7 +276,7 @@ export const AdminEventsPage = () => {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         title={selectedEventId ? 'Editar evento' : 'Novo evento'}
-        description="Fluxo real de criação, edição e curadoria da agenda."
+        description="Cadastre, edite e publique eventos da agenda."
       >
         <EventForm
           cityOptions={mapCitiesToOptions(cities)}
@@ -270,6 +287,19 @@ export const AdminEventsPage = () => {
           onSuccess={() => setIsFormOpen(false)}
         />
       </AdminSideSheet>
+
+      <AdminConfirmDialog
+        description="Esta ação não pode ser desfeita e removerá o evento da agenda administrativa."
+        isConfirming={deleting}
+        isOpen={pendingDeleteEventId !== null}
+        onClose={() => setPendingDeleteEventId(null)}
+        onConfirm={() => {
+          if (pendingDeleteEventId !== null) {
+            void handleDelete(pendingDeleteEventId);
+          }
+        }}
+        title="Excluir evento?"
+      />
     </AdminPage>
   );
 };

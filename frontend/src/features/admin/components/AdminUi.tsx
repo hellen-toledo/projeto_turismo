@@ -1,4 +1,5 @@
-import { Filter, Globe2, Search, X } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Filter, Globe2, Search, X } from 'lucide-react';
+import { useEffect } from 'react';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { adminButtonClassName, adminInputClassName, adminSurfaceClassName } from './adminUiStyles';
@@ -10,27 +11,15 @@ interface AdminPageProps {
   actions?: ReactNode;
 }
 
-export const AdminPage = ({ eyebrow, title, description, actions, children }: PropsWithChildren<AdminPageProps>) => (
-  <div className="space-y-6">
-    <header className="relative overflow-hidden rounded-none border-b border-slate-200 bg-white px-4 py-8 sm:px-6 lg:-mx-8 lg:-mt-8 lg:px-10 lg:py-10">
-      <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-2/5 opacity-35 lg:block">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,23,42,0.08)_1px,transparent_1px),linear-gradient(45deg,rgba(15,23,42,0.06)_1px,transparent_1px)] bg-[length:54px_54px]" />
-      </div>
-      <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div className="max-w-3xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-teal-700">{eyebrow}</p>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{title}</h1>
-          <p className="mt-4 max-w-4xl text-base leading-7 text-slate-700">{description}</p>
-        </div>
-        <div className="flex flex-wrap gap-3">
-          {actions}
-          <Link className={adminButtonClassName.secondary} to="/">
-            <Globe2 className="h-4 w-4" />
-            Acessar Portal Público
-          </Link>
-        </div>
-      </div>
-    </header>
+export const AdminPage = ({ actions, children }: PropsWithChildren<AdminPageProps>) => (
+  <div className="space-y-5">
+    <div className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-end">
+      {actions}
+      <Link className={adminButtonClassName.secondary} to="/">
+        <Globe2 className="h-4 w-4" />
+        Acessar Portal Público
+      </Link>
+    </div>
 
     {children}
   </div>
@@ -48,11 +37,11 @@ export const AdminSurface = ({ title, description, meta, actions, children }: Ad
   <section className={adminSurfaceClassName}>
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div>
-        <h2 className="text-2xl font-bold text-slate-950">{title}</h2>
+        <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
         {description ? <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p> : null}
       </div>
-      <div className="flex flex-wrap items-center gap-3">
-        {meta ? <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700">{meta}</div> : null}
+      <div className="flex w-full flex-col items-stretch gap-2 sm:w-auto sm:flex-row sm:items-center">
+        {meta ? <div className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700">{meta}</div> : null}
         {actions}
       </div>
     </div>
@@ -69,13 +58,13 @@ interface AdminKpiProps {
 }
 
 export const AdminKpi = ({ label, value, hint, icon }: AdminKpiProps) => (
-  <article className="rounded-xl border border-slate-200 bg-white/95 p-5 shadow-sm">
+  <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
     <div className="flex items-start justify-between gap-4">
       <div>
         <p className="text-sm font-medium text-slate-500">{label}</p>
-        <p className="mt-2 text-3xl font-bold text-slate-950">{value}</p>
+        <p className="mt-2 text-2xl font-bold text-slate-950">{value}</p>
       </div>
-      {icon ? <div className="rounded-lg bg-slate-50 p-3 text-teal-700">{icon}</div> : null}
+      {icon ? <div className="rounded-md bg-slate-100 p-2.5 text-teal-700">{icon}</div> : null}
     </div>
     <p className="mt-4 text-sm text-slate-500">{hint}</p>
   </article>
@@ -90,7 +79,7 @@ interface AdminListItemProps {
 }
 
 export const AdminListItem = ({ title, subtitle, badges, description, actions }: AdminListItemProps) => (
-  <article className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-slate-300">
+  <article className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-slate-300">
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
       <div className="min-w-0">
         <h3 className="text-base font-semibold text-slate-950">{title}</h3>
@@ -100,7 +89,7 @@ export const AdminListItem = ({ title, subtitle, badges, description, actions }:
     </div>
 
     {description ? <p className="mt-4 text-sm leading-6 text-slate-600">{description}</p> : null}
-    {actions ? <div className="mt-5 flex flex-wrap gap-2">{actions}</div> : null}
+    {actions ? <div className="mt-5 flex flex-wrap items-center gap-2">{actions}</div> : null}
   </article>
 );
 
@@ -128,7 +117,7 @@ const getStatusClassName = (status: string) => {
 };
 
 export const AdminStatusBadge = ({ status }: AdminStatusBadgeProps) => (
-  <span className={['inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase ring-1 ring-inset', getStatusClassName(status)].join(' ')}>
+  <span className={['inline-flex h-7 items-center rounded-md px-2.5 text-xs font-semibold uppercase ring-1 ring-inset', getStatusClassName(status)].join(' ')}>
     {status}
   </span>
 );
@@ -144,14 +133,14 @@ interface AdminSearchToolbarProps {
 }
 
 export const AdminSearchToolbar = ({ searchInput, filterInput }: AdminSearchToolbarProps) => (
-  <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-    <div className="relative flex-1">
-      <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+  <div className={['grid gap-3 lg:items-center', filterInput ? 'lg:grid-cols-[minmax(0,1fr)_auto]' : 'grid-cols-1'].join(' ')}>
+    <div className="relative w-full">
+      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
       {searchInput}
     </div>
     {filterInput ? (
-      <div className="flex items-center gap-2">
-        <Filter className="h-4 w-4 text-slate-400" />
+      <div className="flex w-full flex-col items-stretch gap-2 sm:flex-row sm:items-center lg:w-auto">
+        <Filter className="hidden h-4 w-4 text-slate-400 sm:block" />
         {filterInput}
       </div>
     ) : null}
@@ -165,13 +154,16 @@ interface AdminSelectFilterProps {
 }
 
 export const AdminSelectFilter = ({ defaultValue, name, options }: AdminSelectFilterProps) => (
-  <select className={`${adminInputClassName} min-w-[190px] bg-white font-semibold`} defaultValue={defaultValue} name={name}>
-    {options.map((option) => (
-      <option key={option.value} value={option.value}>
-        {option.label}
-      </option>
-    ))}
-  </select>
+  <span className="relative block w-full sm:w-auto">
+    <select className={`${adminInputClassName} min-w-0 appearance-none bg-white pr-10 font-semibold sm:w-auto sm:min-w-[180px]`} defaultValue={defaultValue} name={name}>
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+  </span>
 );
 
 interface AdminDataTableColumn<T> {
@@ -195,28 +187,28 @@ export const AdminDataTable = <T,>({ columns, rows, getRowKey, actions, emptySta
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
-        <table className="min-w-full border-separate border-spacing-y-3 text-sm">
-          <thead className="text-left text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-50 text-left text-xs font-semibold uppercase text-slate-500">
             <tr>
               {columns.map((column) => (
-                <th key={column.key} className="px-5 py-2">
+                <th key={column.key} className="px-4 py-3">
                   {column.label}
                 </th>
               ))}
-              {actions ? <th className="px-5 py-2 text-right">Ações</th> : null}
+              {actions ? <th className="px-4 py-3 text-right">Ações</th> : null}
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={getRowKey(row)} className="rounded-xl shadow-sm transition hover:shadow-md">
+              <tr key={getRowKey(row)} className="transition-colors hover:bg-slate-50">
                 {columns.map((column) => (
-                  <td key={column.key} className={['border-y border-slate-200 bg-white px-5 py-5 align-middle text-slate-700 first:rounded-l-xl first:border-l last:rounded-r-xl last:border-r', column.className ?? ''].join(' ').trim()}>
+                  <td key={column.key} className={['px-4 py-4 align-middle text-slate-700', column.className ?? ''].join(' ').trim()}>
                     {column.render(row)}
                   </td>
                 ))}
-                {actions ? <td className="rounded-r-xl border-y border-r border-slate-200 bg-white px-5 py-5 text-right">{actions(row)}</td> : null}
+                {actions ? <td className="px-4 py-4 align-middle text-right">{actions(row)}</td> : null}
               </tr>
             ))}
           </tbody>
@@ -234,35 +226,118 @@ interface AdminSideSheetProps {
 }
 
 export const AdminSideSheet = ({ isOpen, onClose, title, description, children }: PropsWithChildren<AdminSideSheetProps>) => {
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end">
-      {/* Backdrop */}
+    <div className="admin-modal-layer fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/50 sm:p-8 !m-0">
       <button
         aria-label="Fechar painel"
-        className="absolute inset-0 bg-slate-950/20 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 h-full w-full cursor-default"
         onClick={onClose}
         type="button"
+        tabIndex={-1}
       />
-      
-      {/* Panel */}
-      <div className="relative flex h-full w-full max-w-md flex-col bg-white shadow-2xl animate-in slide-in-from-right duration-300">
-        <header className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+      <div
+        aria-modal="true"
+        className="admin-modal-card relative flex max-h-full w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+        role="dialog"
+      >
+        <header className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-white px-6 py-5">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
             {description ? <p className="mt-1 text-sm text-slate-500">{description}</p> : null}
           </div>
           <button
-            className="rounded-md p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-500"
+            className="shrink-0 rounded-md p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
             onClick={onClose}
             type="button"
           >
             <X className="h-5 w-5" />
           </button>
         </header>
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="admin-modal-body flex-1 overflow-y-auto p-6">
           {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface AdminConfirmDialogProps {
+  isOpen: boolean;
+  title: string;
+  description: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  isConfirming?: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+}
+
+export const AdminConfirmDialog = ({
+  cancelLabel = 'Cancelar',
+  confirmLabel = 'Excluir',
+  description,
+  isConfirming = false,
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+}: AdminConfirmDialogProps) => {
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="admin-modal-layer fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/50 sm:p-8 !m-0">
+      <button
+        aria-label="Cancelar confirmação"
+        className="absolute inset-0 h-full w-full cursor-default"
+        disabled={isConfirming}
+        onClick={onClose}
+        type="button"
+        tabIndex={-1}
+      />
+      <div
+        aria-modal="true"
+        className="admin-modal-card relative w-full max-w-md overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 duration-300"
+        role="dialog"
+      >
+        <div className="flex items-start gap-4">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md bg-rose-100 text-rose-700">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+          </div>
+        </div>
+
+        <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <button className={adminButtonClassName.secondary} disabled={isConfirming} onClick={onClose} type="button">
+            {cancelLabel}
+          </button>
+          <button className={adminButtonClassName.danger} disabled={isConfirming} onClick={onConfirm} type="button">
+            {isConfirming ? 'Excluindo...' : confirmLabel}
+          </button>
         </div>
       </div>
     </div>

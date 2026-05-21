@@ -1,6 +1,6 @@
-import { CalendarRange, ChevronLeft, ChevronRight, Home, Images, Landmark, LogOut, MapPinned, Menu, Moon, Shapes, Sun, Waypoints, X } from 'lucide-react';
+import { CalendarRange, Home, Images, Landmark, LogOut, MapPinned, Menu, Moon, PanelLeftClose, PanelLeftOpen, Shapes, Sun, Waypoints, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { getStoredString, setStoredString } from '../../../shared/lib/storage/browserStorage';
 import { adminButtonClassName } from '../components/adminUiStyles';
 import { useAdminAuth } from '../hooks/useAdminAuth';
@@ -16,45 +16,72 @@ const navItems = [
 
 const navItemClassName = ({ isActive }: { isActive: boolean }, isCollapsed: boolean) =>
   [
-    'relative flex items-center rounded-xl text-base font-semibold transition',
-    isCollapsed ? 'justify-center w-11 h-11' : 'w-full gap-4 px-4 py-4 text-left',
+    'relative flex items-center overflow-hidden rounded-md text-sm font-semibold transition-all duration-500 ease-in-out',
+    isCollapsed ? 'h-10 w-10 justify-center gap-0 px-0' : 'h-10 w-full gap-3 px-3 text-left',
     isActive
-      ? 'bg-slate-100 text-slate-950 shadow-sm before:absolute before:right-5 before:h-2.5 before:w-2.5 before:rounded-full before:bg-teal-700/60'
-      : 'text-slate-700 hover:bg-slate-50 hover:text-slate-950',
+      ? 'bg-teal-50 text-teal-800'
+      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950',
   ].join(' ');
 
-const moduleLabelByPath = new Map<string, string>([
-  ['/admin', 'Visão geral'],
-  ['/admin/events', 'Eventos'],
-  ['/admin/cities', 'Cidades'],
-  ['/admin/regions', 'Regiões'],
-  ['/admin/media', 'Mídia'],
-  ['/admin/interest-tags', 'Tags'],
-]);
+const collapsingTextClassName = (isCollapsed: boolean) =>
+  [
+    'min-w-0 overflow-hidden whitespace-nowrap transition-all duration-500 ease-in-out',
+    isCollapsed ? 'w-0 opacity-0' : 'w-36 opacity-100',
+  ].join(' ');
 
 const adminThemeStorageKey = 'turismo-admin-theme';
 
 interface SidebarProps {
   onNavigate?: () => void;
   isCollapsed?: boolean;
+  isDarkTheme: boolean;
   onLogout: () => void;
+  showCollapseControl?: boolean;
+  onToggleCollapse: () => void;
+  onToggleTheme: () => void;
 }
 
-const Sidebar = ({ onNavigate, isCollapsed = false, onLogout }: SidebarProps) => (
+const Sidebar = ({ onNavigate, isCollapsed = false, isDarkTheme, onLogout, showCollapseControl = true, onToggleCollapse, onToggleTheme }: SidebarProps) => (
   <div className="flex h-full flex-col">
-    <div className={['flex items-center py-8', isCollapsed ? 'justify-center' : 'gap-5 px-7'].join(' ')}>
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
-        <Landmark className="h-5 w-5" />
-      </div>
-      {!isCollapsed && (
-        <div className="min-w-0">
-          <p className="truncate text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">Turismo</p>
-          <p className="truncate text-base font-bold text-slate-950">Norte-Goiano</p>
+    <div className={['flex h-20 items-center transition-all duration-500 ease-in-out', isCollapsed ? 'justify-center gap-0 px-0' : 'gap-3 px-5'].join(' ')}>
+      {isCollapsed ? (
+        <button
+          aria-label="Expandir menu"
+          className="group flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-teal-700 text-white shadow-sm transition hover:bg-teal-800 focus:outline-none"
+          onClick={onToggleCollapse}
+          title="Expandir menu"
+          type="button"
+        >
+          <Landmark className="h-5 w-5 group-hover:hidden" />
+          <PanelLeftOpen className="hidden h-5 w-5 group-hover:block" />
+        </button>
+      ) : (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-teal-700 text-white shadow-sm">
+          <Landmark className="h-5 w-5" />
         </div>
       )}
+      <div className={collapsingTextClassName(isCollapsed)}>
+        <p className="truncate text-xs font-semibold uppercase text-teal-700">Turismo</p>
+        <p className="truncate text-base font-bold text-slate-950">Norte-Goiano</p>
+      </div>
+      {showCollapseControl ? (
+        <button
+          aria-label="Recolher menu"
+          className={[
+            'flex h-10 shrink-0 items-center justify-center overflow-hidden rounded-md text-slate-600 transition-all duration-500 ease-in-out hover:bg-slate-100 hover:text-slate-950',
+            isCollapsed ? 'w-0 opacity-0' : 'ml-auto w-10 opacity-100',
+          ].join(' ')}
+          onClick={onToggleCollapse}
+          tabIndex={isCollapsed ? -1 : undefined}
+          title="Recolher menu"
+          type="button"
+        >
+          <PanelLeftClose className="h-5 w-5 shrink-0" />
+        </button>
+      ) : null}
     </div>
 
-    <nav aria-label="Navegação administrativa" className={['flex-1 space-y-3 pt-8', isCollapsed ? 'px-2 flex flex-col items-center' : 'px-5'].join(' ')}>
+    <nav aria-label="Navegação administrativa" className={['flex-1 space-y-1 py-5 transition-all duration-500 ease-in-out', isCollapsed ? 'flex flex-col items-center px-2' : 'px-3'].join(' ')}>
       {navItems.map((item) => {
         const Icon = item.icon;
 
@@ -67,38 +94,49 @@ const Sidebar = ({ onNavigate, isCollapsed = false, onLogout }: SidebarProps) =>
             to={item.to}
             title={isCollapsed ? item.label : undefined}
           >
-            <Icon className="h-6 w-6 shrink-0 text-slate-800" />
-            {!isCollapsed && <span>{item.label}</span>}
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className={collapsingTextClassName(isCollapsed)}>{item.label}</span>
           </NavLink>
         );
       })}
     </nav>
 
-    {!isCollapsed ? (
-      <div className="p-5">
-        <button className="flex w-full items-center gap-4 rounded-xl px-4 py-4 text-left text-base font-semibold text-slate-800 transition hover:bg-slate-50" onClick={onLogout} type="button">
-          <LogOut className="h-6 w-6" />
-          Sair
-        </button>
-      </div>
-    ) : (
-      <div className="p-3 flex justify-center">
-        <button className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-700 transition hover:bg-slate-50" onClick={onLogout} title="Sair" type="button">
-          <LogOut className="h-5 w-5" />
-        </button>
-      </div>
-    )}
+    <div className={['space-y-1 p-3 transition-all duration-500 ease-in-out', isCollapsed ? 'flex flex-col items-center' : ''].join(' ')}>
+      <button
+        aria-label={isCollapsed ? (isDarkTheme ? 'Ativar tema claro' : 'Ativar tema escuro') : undefined}
+        className={[
+          'flex h-10 items-center overflow-hidden rounded-md text-sm font-semibold text-slate-700 transition-all duration-500 ease-in-out hover:bg-slate-100 hover:text-slate-950',
+          isCollapsed ? 'w-10 justify-center gap-0 px-0' : 'w-full gap-3 px-3 text-left',
+        ].join(' ')}
+        onClick={onToggleTheme}
+        title={isCollapsed ? (isDarkTheme ? 'Ativar tema claro' : 'Ativar tema escuro') : undefined}
+        type="button"
+      >
+        {isDarkTheme ? <Sun className="h-4 w-4 shrink-0" /> : <Moon className="h-4 w-4 shrink-0" />}
+        <span className={collapsingTextClassName(isCollapsed)}>{isDarkTheme ? 'Tema claro' : 'Tema escuro'}</span>
+      </button>
+      <button
+        className={[
+          'flex h-10 items-center overflow-hidden rounded-md text-sm font-semibold text-slate-700 transition-all duration-500 ease-in-out hover:bg-slate-100 hover:text-slate-950',
+          isCollapsed ? 'w-10 justify-center gap-0 px-0' : 'w-full gap-3 px-3 text-left',
+        ].join(' ')}
+        onClick={onLogout}
+        title={isCollapsed ? 'Sair' : undefined}
+        type="button"
+      >
+        <LogOut className="h-4 w-4 shrink-0" />
+        <span className={collapsingTextClassName(isCollapsed)}>Sair</span>
+      </button>
+    </div>
   </div>
 );
 
 export const AdminLayout = () => {
-  const { user, logout } = useAdminAuth();
+  const { logout } = useAdminAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDarkTheme, setIsDarkTheme] = useState(() => getStoredString(adminThemeStorageKey) === 'dark');
-  const currentModule = moduleLabelByPath.get(location.pathname) ?? 'Painel';
 
   useEffect(() => {
     setStoredString(adminThemeStorageKey, isDarkTheme ? 'dark' : 'light');
@@ -110,22 +148,14 @@ export const AdminLayout = () => {
   };
 
   return (
-    <div className={['admin-shell min-h-screen transition-colors', isDarkTheme ? 'admin-dark bg-slate-950 text-slate-100' : 'admin-light bg-white text-slate-900'].join(' ')}>
-      {/* Desktop Sidebar */}
-      <aside className={['fixed inset-y-0 left-0 z-40 hidden border-r border-slate-200 bg-white transition-all duration-300 lg:block', isCollapsed ? 'w-20' : 'w-72'].join(' ')}>
-        <Sidebar isCollapsed={isCollapsed} onLogout={() => void handleLogout()} />
-        
-        {/* Toggle Collapse Button */}
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-4 top-24 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:text-slate-700 focus:outline-none"
-          title={isCollapsed ? "Expandir menu" : "Recolher menu"}
-        >
-          {isCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-        </button>
+    <div
+      className={['admin-shell min-h-screen bg-cover bg-fixed bg-center transition-colors', isDarkTheme ? 'admin-dark bg-slate-950 text-slate-100' : 'admin-light bg-slate-50 text-slate-900'].join(' ')}
+      style={{ backgroundImage: "url('/imagemFundoLogin.jpeg')" }}
+    >
+      <aside className={['fixed inset-y-0 left-0 z-40 hidden overflow-hidden bg-white transition-[width] duration-500 ease-in-out lg:block', isCollapsed ? 'w-20' : 'w-64'].join(' ')}>
+        <Sidebar isCollapsed={isCollapsed} isDarkTheme={isDarkTheme} onLogout={() => void handleLogout()} onToggleCollapse={() => setIsCollapsed((current) => !current)} onToggleTheme={() => setIsDarkTheme((current) => !current)} />
       </aside>
 
-      {/* Mobile Sidebar */}
       {mobileMenuOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button
@@ -136,7 +166,7 @@ export const AdminLayout = () => {
             }}
             type="button"
           />
-          <aside className="relative h-full w-72 max-w-[85vw] border-r border-slate-200 bg-white shadow-2xl">
+          <aside className="relative h-full w-72 max-w-[85vw] bg-white shadow-2xl">
             <button
               aria-label="Fechar navegação"
               className={['absolute right-4 top-4', adminButtonClassName.ghost].join(' ')}
@@ -152,58 +182,29 @@ export const AdminLayout = () => {
                 setMobileMenuOpen(false);
               }}
               isCollapsed={false}
+              isDarkTheme={isDarkTheme}
               onLogout={() => void handleLogout()}
+              showCollapseControl={false}
+              onToggleCollapse={() => setIsCollapsed((current) => !current)}
+              onToggleTheme={() => setIsDarkTheme((current) => !current)}
             />
           </aside>
         </div>
       ) : null}
 
-      <div className={['transition-all duration-300', isCollapsed ? 'lg:pl-20' : 'lg:pl-72'].join(' ')}>
-        <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-          <div className="flex min-h-20 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <button
-                aria-label="Abrir navegação"
-                className={adminButtonClassName.ghost}
-                onClick={() => {
-                  setMobileMenuOpen(true);
-                }}
-                type="button"
-              >
-                <Menu className="h-5 w-5 lg:hidden" />
-              </button>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Área administrativa</p>
-                <p className="font-bold text-slate-950">{currentModule}</p>
-              </div>
-            </div>
+      <div className={['relative z-10 transition-[padding] duration-500 ease-in-out', isCollapsed ? 'lg:pl-20' : 'lg:pl-64'].join(' ')}>
+        <button
+          aria-label="Abrir navegação"
+          className="fixed bottom-4 left-4 z-30 inline-flex h-11 w-11 items-center justify-center rounded-md bg-white text-slate-800 shadow-lg transition hover:bg-slate-50 lg:hidden"
+          onClick={() => {
+            setMobileMenuOpen(true);
+          }}
+          type="button"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
 
-            <div className="flex items-center gap-2 sm:gap-4">
-              <button
-                aria-label={isDarkTheme ? 'Ativar tema claro' : 'Ativar tema escuro'}
-                className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-800 transition hover:border-slate-400 hover:bg-slate-50 hover:text-slate-950"
-                onClick={() => setIsDarkTheme((current) => !current)}
-                title={isDarkTheme ? 'Ativar tema claro' : 'Ativar tema escuro'}
-                type="button"
-              >
-                {isDarkTheme ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-              </button>
-              <div className="hidden items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 sm:flex">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-bold text-slate-950">
-                  {(user?.name ?? 'AD')
-                    .split(' ')
-                    .slice(0, 2)
-                    .map((part) => part.charAt(0).toUpperCase())
-                    .join('')
-                    .slice(0, 2)}
-                </div>
-                <span className="max-w-40 truncate text-base font-semibold text-slate-950">{user?.name ?? 'Administrador'}</span>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <main className="mx-auto max-w-[1700px] px-0 py-0 sm:px-0 lg:px-8 lg:py-8">
+        <main className="mx-auto max-w-[1600px] px-0 py-0 sm:px-0 lg:px-8 lg:py-8">
           <Outlet />
         </main>
       </div>

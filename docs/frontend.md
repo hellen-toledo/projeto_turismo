@@ -97,6 +97,8 @@ Responsabilidades:
 - anexar token Bearer quando existe sessão admin
 - limpar sessão admin local em `401` ou `403` de endpoints administrativos
 
+Em desenvolvimento, prefira `VITE_API_URL=/api/v1` e configure o alvo do proxy em `VITE_BACKEND_URL`. Isso mantém API e assets `/storage` na mesma origem do Vite, evitando URLs locais absolutas que podem não estar expostas ao navegador.
+
 ### Paths
 
 Os paths ficam em [frontend/src/shared/lib/api/config.ts](/home/hellen/projeto_turismo/frontend/src/shared/lib/api/config.ts:1).

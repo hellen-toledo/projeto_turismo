@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { resolveAssetUrl } from '../../../shared/lib/api/resolveAssetUrl';
 import type { City } from '../../../shared/types/api';
 
 interface CityDetailsContentProps {
@@ -8,6 +9,7 @@ interface CityDetailsContentProps {
 export const CityDetailsContent = ({ city }: CityDetailsContentProps) => {
   const publishedAttractions = city.attractions?.filter((attraction) => attraction.isPublished !== false) ?? [];
   const gallery = city.gallery ?? [];
+  const coverImage = resolveAssetUrl(city.coverImage);
 
   return (
     <article className="mx-auto max-w-7xl p-4 md:p-8">
@@ -21,7 +23,7 @@ export const CityDetailsContent = ({ city }: CityDetailsContentProps) => {
 
       <section className="mb-8">
         <img
-          src={city.coverImage ?? 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1200&auto=format&fit=crop'}
+          src={coverImage ?? 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1200&auto=format&fit=crop'}
           alt={city.coverImage ? `Imagem de capa de ${city.name}` : `Imagem ilustrativa de ${city.name}`}
           className="h-[300px] w-full rounded-2xl object-cover shadow-lg md:h-[500px]"
         />
@@ -63,7 +65,7 @@ export const CityDetailsContent = ({ city }: CityDetailsContentProps) => {
             {gallery.map((image, index) => (
               <figure key={image.id} className="overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/70">
                 <img
-                  src={image.url}
+                  src={resolveAssetUrl(image.url) ?? image.url}
                   alt={image.altText?.trim() || `Imagem ${index + 1} da galeria de ${city.name}`}
                   className="h-60 w-full object-cover"
                 />

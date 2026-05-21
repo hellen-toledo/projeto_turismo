@@ -153,6 +153,43 @@ describe('EventForm', () => {
     });
   });
 
+  it('vincula upload local da capa como mídia real da galeria', async () => {
+    const user = userEvent.setup();
+    mockCreateEvent.mockResolvedValue({});
+
+    renderWithProviders(
+      <EventForm
+        cityOptions={cityOptions}
+        tagOptions={tagOptions}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Título do evento'), { target: { value: 'Festa do Pequi' } });
+    fireEvent.change(screen.getByLabelText('Cidade'), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText('Início'), { target: { value: '2026-06-01T18:00' } });
+    fireEvent.change(screen.getByPlaceholderText('Descreva programação, público e contexto do evento.'), {
+      target: { value: 'Celebração regional.' },
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Simular upload Imagem de capa' }));
+    await user.click(screen.getByRole('button', { name: 'Criar evento' }));
+
+    await waitFor(() => {
+      expect(mockCreateEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          coverImage: 'https://cdn.example.com/uploaded-event-image.jpg',
+          gallery: [
+            expect.objectContaining({
+              mediaAssetId: 99,
+              url: 'https://cdn.example.com/uploaded-event-image.jpg',
+              isCover: true,
+            }),
+          ],
+        }),
+      );
+    });
+  });
+
   it('edita evento existente', async () => {
     const user = userEvent.setup();
     mockUpdateEvent.mockResolvedValue({});

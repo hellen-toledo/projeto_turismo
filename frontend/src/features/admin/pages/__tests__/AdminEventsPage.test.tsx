@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/utils';
@@ -10,14 +10,12 @@ const {
   mockUseAdminEvent,
   mockUseAdminCities,
   mockUseAdminInterestTags,
-  mockConfirm,
 } = vi.hoisted(() => ({
   mockDeleteEvent: vi.fn(),
   mockUseAdminEvents: vi.fn(),
   mockUseAdminEvent: vi.fn(),
   mockUseAdminCities: vi.fn(),
   mockUseAdminInterestTags: vi.fn(),
-  mockConfirm: vi.fn(),
 }));
 
 vi.mock('../../hooks/useAdminEvents', () => ({
@@ -91,19 +89,18 @@ describe('AdminEventsPage', () => {
       isError: false,
     });
 
-    mockConfirm.mockReset();
-    vi.stubGlobal('confirm', mockConfirm);
   });
 
   it('confirma antes de excluir o evento', async () => {
     const user = userEvent.setup();
-    mockConfirm.mockReturnValue(true);
 
     renderWithProviders(<AdminEventsPage />, { route: '/admin/events' });
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    const dialog = screen.getByRole('dialog');
 
-    expect(mockConfirm).toHaveBeenCalledWith('Tem certeza que deseja excluir este evento? Esta ação não pode ser desfeita.');
+    expect(within(dialog).getByText('Excluir evento?')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }));
     await waitFor(() => {
       expect(mockDeleteEvent).toHaveBeenCalledWith(22);
     });
@@ -111,11 +108,11 @@ describe('AdminEventsPage', () => {
 
   it('não exclui o evento quando a confirmação é cancelada', async () => {
     const user = userEvent.setup();
-    mockConfirm.mockReturnValue(false);
 
     renderWithProviders(<AdminEventsPage />, { route: '/admin/events' });
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }));
 
     expect(mockDeleteEvent).not.toHaveBeenCalled();
   });

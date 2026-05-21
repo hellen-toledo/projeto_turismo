@@ -1,6 +1,6 @@
 import { ImagePlus, ListOrdered, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import type { City } from '../../../shared/types/api';
+import type { City, MediaAsset } from '../../../shared/types/api';
 import { FormActions } from '../../../shared/components/form/FormActions';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { ImageUploadField } from '../../../shared/components/form/ImageUploadField';
@@ -9,6 +9,7 @@ import { TagMultiSelect } from '../../../shared/components/form/TagMultiSelect';
 import { TextInput } from '../../../shared/components/form/TextInput';
 import { TextareaField } from '../../../shared/components/form/TextareaField';
 import { ToggleField } from '../../../shared/components/form/ToggleField';
+import { useToast } from '../../../shared/components/toast/toastContext';
 import { getApiErrorMessage, getApiValidationErrors } from '../../../shared/lib/api/getApiErrorMessage';
 import { uploadAdminMedia } from '../api/adminMediaApi';
 import { adminButtonClassName } from '../components/adminUiStyles';
@@ -23,9 +24,11 @@ import type {
 import {
   createEmptyCityAttraction,
   createEmptyCityForm,
+  mapMediaAssetToGalleryFormValue,
   mapCityToFormValues,
 } from '../types/admin';
 import { useGalleryItems } from './useGalleryItems';
+import { getValidationSummary } from './validationSummary';
 import { validateCityForm } from './validators';
 
 interface CityFormProps {
@@ -43,15 +46,27 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
   const [values, setValues] = useState<CityFormValues>(createInitialValues);
   const [errors, setErrors] = useState<AdminValidationErrors>({});
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
+  const [pendingUploadCount, setPendingUploadCount] = useState(0);
   const { createCity, updateCity, creating, updating } = useAdminCityMutations();
+  const { showToast } = useToast();
 
-  const isSubmitting = creating || updating;
+  const isUploadingImage = pendingUploadCount > 0;
+  const isSubmitting = creating || updating || isUploadingImage;
 
-  const setFieldValue = <Key extends keyof CityFormValues>(field: Key, value: CityFormValues[Key]) => {
+  const setFieldValue = <Key extends keyof CityFormValues>(
+    field: Key,
+    value: CityFormValues[Key] | ((currentValue: CityFormValues[Key]) => CityFormValues[Key]),
+  ) => {
     setValues((current) => ({
       ...current,
-      [field]: value,
+      [field]: typeof value === 'function'
+        ? (value as (currentValue: CityFormValues[Key]) => CityFormValues[Key])(current[field])
+        : value,
     }));
+  };
+
+  const handleUploadStateChange = (isUploading: boolean) => {
+    setPendingUploadCount((current) => Math.max(0, current + (isUploading ? 1 : -1)));
   };
 
   const {
@@ -59,7 +74,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
     markGalleryCover,
     removeGalleryItem,
     updateGalleryItem,
-  } = useGalleryItems(values.gallery, (gallery) => setFieldValue('gallery', gallery));
+  } = useGalleryItems((gallery) => setFieldValue('gallery', gallery));
 
   const updateAttraction = (tempId: string, updater: (item: CityAttractionFormValue) => CityAttractionFormValue) => {
     setFieldValue(
@@ -68,16 +83,56 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
     );
   };
 
+  const syncUploadedCoverWithGallery = (media: MediaAsset) => {
+    setFieldValue('gallery', (currentGallery) => {
+      const existingIndex = currentGallery.findIndex((item) => item.mediaAssetId === media.id);
+      const nextGallery = currentGallery.map((item, index) => ({
+        ...item,
+        sortOrder: item.sortOrder ?? index,
+        isCover: item.mediaAssetId === media.id,
+      }));
+
+      if (existingIndex === -1) {
+        nextGallery.push({
+          ...mapMediaAssetToGalleryFormValue(media, currentGallery.length),
+          isCover: true,
+        });
+      }
+
+      return nextGallery;
+    });
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const nextErrors = validateCityForm(values);
     setErrors(nextErrors);
 
+    if (isUploadingImage) {
+      const message = 'Aguarde o envio da imagem antes de salvar a cidade.';
+      setFeedback({
+        type: 'error',
+        message,
+      });
+      showToast({
+        type: 'error',
+        title: 'Não foi possível salvar',
+        message,
+      });
+      return;
+    }
+
     if (Object.keys(nextErrors).length) {
+      const message = getValidationSummary(nextErrors);
       setFeedback({
         type: 'error',
         message: 'Revise os campos destacados antes de salvar a cidade.',
+      });
+      showToast({
+        type: 'error',
+        title: 'Campos obrigatórios pendentes',
+        message,
       });
       return;
     }
@@ -89,9 +144,14 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
         await createCity(values);
       }
 
+      const successMessage = city ? 'Edição realizada com sucesso.' : 'Criação de cidade com sucesso.';
       setFeedback({
         type: 'success',
-        message: city ? 'Cidade atualizada com sucesso.' : 'Cidade criada com sucesso.',
+        message: successMessage,
+      });
+      showToast({
+        type: 'success',
+        title: successMessage,
       });
       setErrors({});
 
@@ -105,15 +165,27 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
     } catch (error) {
       const apiValidationErrors = getApiValidationErrors(error);
       if (Object.keys(apiValidationErrors).length > 0) {
+        const message = getValidationSummary(apiValidationErrors);
         setErrors(apiValidationErrors);
         setFeedback({
           type: 'error',
-          message: 'Há erros de validação retornados pelo servidor.',
+          message: 'Revise os campos destacados.',
+        });
+        showToast({
+          type: 'error',
+          title: 'Campos obrigatórios pendentes',
+          message,
         });
       } else {
+        const message = getApiErrorMessage(error, 'Falha ao salvar a cidade.');
         setFeedback({
           type: 'error',
-          message: getApiErrorMessage(error, 'Falha ao salvar a cidade.'),
+          message,
+        });
+        showToast({
+          type: 'error',
+          title: 'Não foi possível salvar',
+          message,
         });
       }
     }
@@ -136,7 +208,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
   };
 
   if (isLoadingCity) {
-    return <div className="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-8 text-sm text-slate-500">Carregando dados completos da cidade...</div>;
+    return <div className="rounded-md border border-slate-200 bg-slate-50 px-5 py-8 text-sm text-slate-500">Carregando dados completos da cidade...</div>;
   }
 
   return (
@@ -148,6 +220,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
           error={errors.name}
           id="city-name"
           label="Nome da cidade"
+          requiredMark
           onChange={(event) => {
             setFieldValue('name', event.target.value);
           }}
@@ -156,9 +229,9 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
         />
         <TextInput
           error={errors.slug}
-          hint="Opcional. Pode ficar vazio para o backend gerar ou tratar depois."
+          hint="Opcional. Deixe vazio para gerar automaticamente."
           id="city-slug"
-          label="Slug"
+          label="Endereço amigável"
           onChange={(event) => {
             setFieldValue('slug', event.target.value);
           }}
@@ -185,6 +258,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
             error={errors.regionId}
             id="city-region"
             label="Região"
+            requiredMark
             onChange={(event) => {
               setFieldValue('regionId', event.target.value);
             }}
@@ -193,7 +267,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
           />
           <ToggleField
             checked={values.isPublished}
-            description="Quando ativo, a cidade fica pronta para aparecer nas rotas públicas."
+            description="Quando ativo, a cidade aparece no portal público."
             id="city-published"
             label="Publicada"
             onChange={(event) => {
@@ -208,6 +282,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
         hint="Campo principal com descrição rica da cidade."
         id="city-description"
         label="Descrição"
+        requiredMark
         onChange={(event) => {
           setFieldValue('description', event.target.value);
         }}
@@ -217,20 +292,22 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
 
       <ImageUploadField
         error={errors.coverImage}
-        hint="Aceita URL manual ou upload real para o painel administrativo."
+        hint="Informe um link ou envie uma imagem."
         id="city-cover-image"
         label="Imagem de capa"
         onChange={(value) => {
           setFieldValue('coverImage', value);
         }}
         onUpload={uploadAdminMedia}
+        onUploadComplete={syncUploadedCoverWithGallery}
+        onUploadStateChange={handleUploadStateChange}
         showAltText={false}
         uploadCollection="cover"
         value={values.coverImage}
       />
 
       <TagMultiSelect
-        hint="Selecione tags temáticas para filtros futuros."
+        hint="Selecione temas para facilitar a busca e organização."
         label="Tags de interesse"
         onChange={(nextValues) => {
           setFieldValue('interestTagIds', nextValues);
@@ -239,15 +316,15 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
         selectedValues={values.interestTagIds}
       />
 
-      <section className="space-y-4 rounded-[28px] border border-slate-200 bg-slate-50/70 p-5">
+      <section className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700">Galeria</p>
-            <h2 className="mt-1 text-xl font-black text-slate-900">Imagens complementares</h2>
+            <p className="text-xs font-semibold uppercase text-emerald-700">Galeria</p>
+            <h2 className="mt-1 text-lg font-semibold text-slate-900">Imagens complementares</h2>
             <p className="mt-1 text-sm text-slate-500">Envie múltiplas imagens, ajuste textos alternativos e escolha a capa editorial.</p>
           </div>
           <button
-            className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
+            className="inline-flex h-10 items-center gap-2 self-start rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
             onClick={addGalleryItem}
             type="button"
           >
@@ -257,16 +334,16 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
         </div>
 
         {values.gallery.length ? (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4">
             {values.gallery.map((item, index) => (
-              <article key={item.id} className="space-y-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+              <article key={item.id} className="space-y-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-slate-800">Imagem {index + 1}</p>
                     <p className="text-xs text-slate-500">Controle a ordem e marque qual será a capa.</p>
                   </div>
                   <button
-                    className="inline-flex items-center gap-2 rounded-full border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                    className="inline-flex h-9 items-center gap-2 rounded-md border border-rose-200 px-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
                     onClick={() => {
                       removeGalleryItem(item.id);
                     }}
@@ -281,7 +358,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
                   allowManualUrl={false}
                   altText={item.altText}
                   error={getNestedError(errors, `gallery.${index}.mediaAssetId`)}
-                  hint="Use o upload do painel para manter a mídia rastreável."
+                  hint="Envie a imagem para usar na galeria."
                   id={`city-gallery-${item.id}`}
                   label="Arquivo da galeria"
                   onAltTextChange={(value) => {
@@ -308,6 +385,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
                   }}
                   onUpload={uploadAdminMedia}
                   uploadCollection="gallery"
+                  onUploadStateChange={handleUploadStateChange}
                   value={item.url}
                 />
 
@@ -339,21 +417,21 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
             ))}
           </div>
         ) : (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-sm text-slate-500">
+          <div className="rounded-md border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-sm text-slate-500">
             Nenhuma imagem complementar adicionada.
           </div>
         )}
       </section>
 
-      <section className="space-y-4 rounded-[28px] border border-slate-200 bg-slate-50/70 p-5">
+      <section className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700">Atrações</p>
-            <h2 className="mt-1 text-xl font-black text-slate-900">Pontos turísticos e experiências</h2>
+            <p className="text-xs font-semibold uppercase text-emerald-700">Atrações</p>
+            <h2 className="mt-1 text-lg font-semibold text-slate-900">Pontos turísticos e experiências</h2>
             <p className="mt-1 text-sm text-slate-500">Cadastre atrações publicáveis com ordem editorial e imagem opcional.</p>
           </div>
           <button
-            className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
+            className="inline-flex h-10 items-center gap-2 self-start rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
             onClick={addAttraction}
             type="button"
           >
@@ -365,7 +443,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
         {values.attractions.length ? (
           <div className="space-y-4">
             {values.attractions.map((attraction, index) => (
-              <article key={attraction.tempId} className="space-y-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+              <article key={attraction.tempId} className="space-y-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-3">
                     <ListOrdered className="h-5 w-5 text-emerald-700" />
@@ -375,7 +453,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
                     </div>
                   </div>
                   <button
-                    className="inline-flex items-center gap-2 self-start rounded-full border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                    className="inline-flex h-9 items-center gap-2 self-start rounded-md border border-rose-200 px-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
                     onClick={() => {
                       removeAttraction(attraction.tempId);
                     }}
@@ -391,6 +469,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
                     error={getNestedError(errors, `attractions.${index}.name`)}
                     id={`city-attraction-name-${attraction.tempId}`}
                     label="Nome da atração"
+                    requiredMark
                     onChange={(event) => {
                       updateAttraction(attraction.tempId, (current) => ({
                         ...current,
@@ -428,10 +507,10 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
                   value={attraction.description}
                 />
 
-                <div className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
+                <div className="grid gap-4">
                   <ImageUploadField
                     error={getNestedError(errors, `attractions.${index}.imageUrl`)}
-                    hint="A imagem da atração pode ser uma URL manual ou um upload do painel."
+                    hint="Informe um link ou envie uma imagem."
                     id={`city-attraction-image-${attraction.tempId}`}
                     label="Imagem da atração"
                     onChange={(value) => {
@@ -441,6 +520,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
                       }));
                     }}
                     onUpload={uploadAdminMedia}
+                    onUploadStateChange={handleUploadStateChange}
                     showAltText={false}
                     uploadCollection="gallery"
                     value={attraction.imageUrl}
@@ -462,7 +542,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
             ))}
           </div>
         ) : (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-sm text-slate-500">
+          <div className="rounded-md border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-sm text-slate-500">
             Nenhuma atração cadastrada. Use o botão acima para adicionar.
           </div>
         )}
@@ -485,7 +565,7 @@ export const CityForm = ({ city, isLoadingCity = false, regionOptions, tagOption
           disabled={isSubmitting}
           type="submit"
         >
-          {isSubmitting ? 'Salvando...' : city ? 'Atualizar cidade' : 'Criar cidade'}
+          {isUploadingImage ? 'Enviando imagem...' : isSubmitting ? 'Salvando...' : city ? 'Atualizar cidade' : 'Criar cidade'}
         </button>
       </FormActions>
     </form>

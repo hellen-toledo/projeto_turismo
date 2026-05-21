@@ -22,7 +22,7 @@ export const TagMultiSelect = ({ error, hint, label, onChange, options, selected
 
   return (
     <FormField error={error} hint={hint} label={label}>
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-3">
+      <div className="flex flex-wrap gap-2 rounded-md border border-slate-200 bg-white p-3">
         {options.map((option) => {
           const selected = selectedValues.includes(option.value);
 
@@ -30,7 +30,7 @@ export const TagMultiSelect = ({ error, hint, label, onChange, options, selected
             <button
               key={option.value}
               className={[
-                'rounded-full border px-3 py-2 text-sm font-semibold transition-colors',
+                'h-9 rounded-md border px-3 text-sm font-semibold transition-colors',
                 selected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 text-slate-600 hover:border-emerald-400 hover:text-emerald-700',
               ].join(' ')}
               onClick={() => {

@@ -32,11 +32,11 @@ export const Header = () => {
         </nav>
 
         <Link
-          to="/cidades"
-          aria-label="Visualizar destinos"
+          to="/admin/login"
+          aria-label="Login administrativo"
           className="rounded-full bg-green-600 px-6 py-2 font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
         >
-          Visualizar
+          Login
         </Link>
       </div>
     </header>

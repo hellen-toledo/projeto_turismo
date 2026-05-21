@@ -27,7 +27,7 @@ export const CitiesPage = () => {
       />
 
       <form
-        className="mb-8 grid gap-3 md:grid-cols-[2fr_1fr_1fr_auto]"
+        className="mb-8 grid items-stretch gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto]"
         onSubmit={(event) => {
           event.preventDefault();
           const formData = new FormData(event.currentTarget);
@@ -51,27 +51,27 @@ export const CitiesPage = () => {
         }}
       >
         <input
-          className="rounded-2xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-100 placeholder-gray-500"
+          className="h-12 w-full rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm text-gray-100 placeholder-gray-500"
           defaultValue={filters.search ?? ''}
           name="q"
           placeholder="Buscar cidade, descrição ou resumo"
           type="text"
         />
         <input
-          className="rounded-2xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-100 placeholder-gray-500"
+          className="h-12 w-full rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm text-gray-100 placeholder-gray-500"
           defaultValue={filters.region ?? ''}
           name="region"
           placeholder="Filtrar por região"
           type="text"
         />
         <input
-          className="rounded-2xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-100 placeholder-gray-500"
+          className="h-12 w-full rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm text-gray-100 placeholder-gray-500"
           defaultValue={filters.tag ?? ''}
           name="tag"
           placeholder="Filtrar por tag"
           type="text"
         />
-        <button className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white" type="submit">
+        <button className="inline-flex h-12 items-center justify-center rounded-2xl bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500" type="submit">
           Aplicar
         </button>
       </form>

@@ -1,13 +1,12 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/utils';
 import { AdminMediaPage } from '../AdminMediaPage';
 
-const { mockUploadMedia, mockDeleteMedia, mockConfirm } = vi.hoisted(() => ({
+const { mockUploadMedia, mockDeleteMedia } = vi.hoisted(() => ({
   mockUploadMedia: vi.fn(),
   mockDeleteMedia: vi.fn(),
-  mockConfirm: vi.fn(),
 }));
 
 vi.mock('../../hooks/useAdminMedia', () => ({
@@ -51,8 +50,6 @@ describe('AdminMediaPage', () => {
     mockUploadMedia.mockResolvedValue(undefined);
     mockDeleteMedia.mockReset();
     mockDeleteMedia.mockResolvedValue(undefined);
-    mockConfirm.mockReset();
-    vi.stubGlobal('confirm', mockConfirm);
     vi.stubGlobal('URL', {
       createObjectURL: vi.fn(() => 'blob:preview'),
       revokeObjectURL: vi.fn(),
@@ -82,13 +79,14 @@ describe('AdminMediaPage', () => {
 
   it('confirma antes de remover uma mídia', async () => {
     const user = userEvent.setup();
-    mockConfirm.mockReturnValue(true);
 
     renderWithProviders(<AdminMediaPage />, { route: '/admin/media' });
 
     await user.click(screen.getByRole('button', { name: 'Remover' }));
+    const dialog = screen.getByRole('dialog');
 
-    expect(mockConfirm).toHaveBeenCalledWith('Tem certeza que deseja remover esta mídia? Esta ação não pode ser desfeita.');
+    expect(within(dialog).getByText('Remover mídia?')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Remover' }));
 
     await waitFor(() => {
       expect(mockDeleteMedia).toHaveBeenCalledWith(7);

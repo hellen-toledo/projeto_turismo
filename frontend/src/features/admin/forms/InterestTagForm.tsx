@@ -3,11 +3,13 @@ import type { InterestTag } from '../../../shared/types/api';
 import { FormActions } from '../../../shared/components/form/FormActions';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { TextInput } from '../../../shared/components/form/TextInput';
+import { useToast } from '../../../shared/components/toast/toastContext';
 import { getApiErrorMessage, getApiValidationErrors } from '../../../shared/lib/api/getApiErrorMessage';
 import { adminButtonClassName } from '../components/adminUiStyles';
 import { useAdminInterestTagMutations } from '../hooks/useAdminInterestTags';
 import type { AdminFeedback, AdminValidationErrors, InterestTagFormValues } from '../types/admin';
 import { createEmptyInterestTagForm, mapInterestTagToFormValues } from '../types/admin';
+import { getValidationSummary } from './validationSummary';
 
 interface InterestTagFormProps {
   tag?: InterestTag | null;
@@ -20,6 +22,7 @@ export const InterestTagForm = ({ tag, onSuccess }: InterestTagFormProps) => {
   const [errors, setErrors] = useState<AdminValidationErrors>({});
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const { createInterestTag, updateInterestTag, creating, updating } = useAdminInterestTagMutations();
+  const { showToast } = useToast();
 
   const isSubmitting = creating || updating;
 
@@ -35,9 +38,15 @@ export const InterestTagForm = ({ tag, onSuccess }: InterestTagFormProps) => {
     setErrors(nextErrors);
 
     if (Object.keys(nextErrors).length) {
+      const message = getValidationSummary(nextErrors);
       setFeedback({
         type: 'error',
         message: 'Revise os campos destacados antes de salvar a tag.',
+      });
+      showToast({
+        type: 'error',
+        title: 'Campos obrigatórios pendentes',
+        message,
       });
       return;
     }
@@ -49,9 +58,14 @@ export const InterestTagForm = ({ tag, onSuccess }: InterestTagFormProps) => {
         await createInterestTag(values);
       }
 
+      const successMessage = tag ? 'Edição realizada com sucesso.' : 'Criação de tag com sucesso.';
       setFeedback({
         type: 'success',
-        message: tag ? 'Tag atualizada com sucesso.' : 'Tag criada com sucesso.',
+        message: successMessage,
+      });
+      showToast({
+        type: 'success',
+        title: successMessage,
       });
       setErrors({});
 
@@ -66,15 +80,27 @@ export const InterestTagForm = ({ tag, onSuccess }: InterestTagFormProps) => {
       const apiValidationErrors = getApiValidationErrors(error);
 
       if (Object.keys(apiValidationErrors).length > 0) {
+        const message = getValidationSummary(apiValidationErrors);
         setErrors(apiValidationErrors);
         setFeedback({
           type: 'error',
-          message: 'Há erros de validação retornados pelo servidor.',
+          message: 'Revise os campos destacados.',
+        });
+        showToast({
+          type: 'error',
+          title: 'Campos obrigatórios pendentes',
+          message,
         });
       } else {
+        const message = getApiErrorMessage(error, 'Falha ao salvar a tag.');
         setFeedback({
           type: 'error',
-          message: getApiErrorMessage(error, 'Falha ao salvar a tag.'),
+          message,
+        });
+        showToast({
+          type: 'error',
+          title: 'Não foi possível salvar',
+          message,
         });
       }
     }
@@ -89,6 +115,7 @@ export const InterestTagForm = ({ tag, onSuccess }: InterestTagFormProps) => {
           error={errors.name}
           id="interest-tag-name"
           label="Nome da tag"
+          requiredMark
           onChange={(event) => {
             setValues((current) => ({
               ...current,
@@ -101,9 +128,9 @@ export const InterestTagForm = ({ tag, onSuccess }: InterestTagFormProps) => {
 
         <TextInput
           error={errors.slug}
-          hint="Opcional. O backend aceita valor vazio."
+          hint="Opcional. Deixe vazio para gerar automaticamente."
           id="interest-tag-slug"
-          label="Slug"
+          label="Endereço amigável"
           onChange={(event) => {
             setValues((current) => ({
               ...current,

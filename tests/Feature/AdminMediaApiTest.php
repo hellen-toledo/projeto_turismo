@@ -47,6 +47,74 @@ class AdminMediaApiTest extends TestCase
         Storage::disk('public')->assertExists($media->path);
     }
 
+    public function test_admin_can_upload_jpg_media(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+
+        $response = $this->post('/api/v1/admin/media', [
+            'file' => $this->fakeJpegImage('cover.jpg'),
+            'collection' => 'cover',
+        ], [
+            'Accept' => 'application/json',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('originalName', 'cover.jpg')
+            ->assertJsonPath('collection', 'cover')
+            ->assertJsonPath('mimeType', 'image/jpeg');
+
+        $media = MediaAsset::query()->first();
+
+        $this->assertNotNull($media);
+        $this->assertDatabaseHas('media_assets', [
+            'id' => $media->id,
+            'disk' => 'public',
+            'original_name' => 'cover.jpg',
+            'mime_type' => 'image/jpeg',
+        ]);
+        Storage::disk('public')->assertExists($media->path);
+    }
+
+    public function test_admin_can_upload_media_up_to_fifteen_megabytes(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+
+        $response = $this->post('/api/v1/admin/media', [
+            'file' => $this->fakePngImageWithSize('large-cover.png', 15 * 1024 * 1024),
+            'collection' => 'cover',
+        ], [
+            'Accept' => 'application/json',
+        ]);
+
+        $response
+            ->assertCreated()
+            ->assertJsonPath('originalName', 'large-cover.png')
+            ->assertJsonPath('size', 15 * 1024 * 1024);
+
+        $media = MediaAsset::query()->first();
+
+        $this->assertNotNull($media);
+        Storage::disk('public')->assertExists($media->path);
+    }
+
+    public function test_media_upload_rejects_files_larger_than_fifteen_megabytes(): void
+    {
+        Storage::fake('public');
+        Sanctum::actingAs(User::factory()->admin()->create(), ['admin']);
+
+        $this->post('/api/v1/admin/media', [
+            'file' => $this->fakePngImageWithSize('too-large.png', (15 * 1024 * 1024) + 1024),
+            'collection' => 'cover',
+        ], [
+            'Accept' => 'application/json',
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['file']);
+    }
+
     public function test_guest_cannot_upload_media(): void
     {
         Storage::fake('public');
@@ -166,5 +234,25 @@ class AdminMediaApiTest extends TestCase
         );
 
         return UploadedFile::fake()->createWithContent($name, $png ?: '');
+    }
+
+    private function fakePngImageWithSize(string $name, int $size): UploadedFile
+    {
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4////fwAJ+wP9KobjigAAAABJRU5ErkJggg==',
+            true,
+        ) ?: '';
+
+        return UploadedFile::fake()->createWithContent($name, str_pad($png, $size, "\0"));
+    }
+
+    private function fakeJpegImage(string $name): UploadedFile
+    {
+        $jpeg = base64_decode(
+            '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAX/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAH/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAEFAqf/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/ASP/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/ASP/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAY/Aqf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/IV//2gAMAwEAAgADAAAAEP/EFBQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQMBAT8QH//EFBQRAQAAAAAAAAAAAAAAAAAAABD/2gAIAQIBAT8QH//EFBABAQAAAAAAAAAAAAAAAAAAABD/2gAIAQEAAT8QH//Z',
+            true,
+        );
+
+        return UploadedFile::fake()->createWithContent($name, $jpeg ?: '');
     }
 }

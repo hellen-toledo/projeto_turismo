@@ -27,7 +27,7 @@ class UpdateCityRequest extends FormRequest
             'slug' => ['nullable', 'string', 'max:255'],
             'summary' => ['nullable', 'string', 'max:500'],
             'description' => ['sometimes', 'string'],
-            'coverImage' => ['nullable', 'url', 'max:2048'],
+            'coverImage' => $this->coverImageRules(),
             'regionId' => ['sometimes', 'integer', 'exists:regions,id'],
             'isPublished' => ['sometimes', 'boolean'],
             ...$this->interestTagRules(),

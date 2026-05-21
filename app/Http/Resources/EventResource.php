@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class EventResource extends JsonResource
 {
@@ -12,12 +11,18 @@ class EventResource extends JsonResource
     {
         $coverImage = $this->cover_image;
 
+        // Use gallery cover only as a fallback when no explicit cover image was saved.
         if (! $coverImage && $this->relationLoaded('galleryMediaAssets')) {
             $coverMedia = $this->galleryMediaAssets->first(fn ($media) => (bool) ($media->pivot?->is_cover ?? false));
 
             if ($coverMedia) {
-                $coverImage = Storage::disk($coverMedia->disk)->url($coverMedia->path);
+                $coverImage = '/storage/'.ltrim($coverMedia->path, '/');
             }
+        }
+
+        // Ensure that if cover_image is a relative path, we resolve it
+        if ($coverImage && ! str_starts_with($coverImage, 'http') && ! str_starts_with($coverImage, '/')) {
+            $coverImage = '/storage/'.ltrim($coverImage, '/');
         }
 
         return [

@@ -53,10 +53,13 @@ Crie ou valide seu arquivo de configuração baseado no exemplo:
 ```bash
 cp .env.example .env
 ```
-O arquivo precisa apontar para a porta onde o serviço Laravel estará de pé. Exemplo:
+O frontend deve usar a API relativa para que as chamadas `/api` e os assets `/storage` passem pelo proxy do Vite. O alvo real do proxy fica em `VITE_BACKEND_URL`:
 ```env
-VITE_API_URL=http://localhost:8000/api/v1
+VITE_API_URL=/api/v1
+VITE_BACKEND_URL=http://localhost:8000
 ```
+
+Se o Laravel estiver em outro host a partir do processo do Vite, ajuste apenas `VITE_BACKEND_URL`.
 
 ### Rodando o Servidor de Desenvolvimento
 

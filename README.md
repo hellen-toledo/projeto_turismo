@@ -32,7 +32,7 @@ php artisan key:generate
 touch database/database.sqlite
 php artisan migrate --seed
 php artisan storage:link
-php artisan serve
+php -d upload_max_filesize=15M -d post_max_size=16M artisan serve
 ```
 
 ### Frontend
@@ -45,11 +45,14 @@ npm run dev
 
 O frontend local sobe em `http://127.0.0.1:4173`.
 
-### Variável principal do frontend
+### Variáveis principais do frontend
 
 ```dotenv
-VITE_API_URL=http://localhost:8000/api/v1
+VITE_API_URL=/api/v1
+VITE_BACKEND_URL=http://localhost:8000
 ```
+
+Use `VITE_API_URL` relativo no desenvolvimento para que `/api` e `/storage` passem pelo proxy do Vite. Ajuste `VITE_BACKEND_URL` para a origem onde o Laravel está acessível a partir do processo do Vite; em ambiente containerizado pode ser `http://localhost` ou outro host interno.
 
 ## Comandos úteis
 

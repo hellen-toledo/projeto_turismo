@@ -17,7 +17,9 @@ class ListEventsAction
         $tagId = $filters['tag_id'] ?? null;
 
         return Event::query()
-            ->with(['city.region', 'interestTags'])
+            ->with(['city.region', 'interestTags', 'galleryMediaAssets' => function ($query) {
+                $query->wherePivot('is_cover', true);
+            }])
             ->when(
                 ! $includeUnpublished,
                 fn ($query) => $query->where('is_published', true),
@@ -41,8 +43,8 @@ class ListEventsAction
                 ! isset($cityId) && filled($city),
                 fn ($query) => $query->whereHas('city', function ($cityQuery) use ($city): void {
                     $cityQuery
-                        ->where('slug', $city)
-                        ->orWhere('name', $city)
+                        ->where('slug', 'like', "%{$city}%")
+                        ->orWhere('name', 'like', "%{$city}%")
                         ->when(is_numeric($city), fn ($numericQuery) => $numericQuery->orWhere('id', (int) $city));
                 })
             )
@@ -54,8 +56,8 @@ class ListEventsAction
                 ! isset($tagId) && filled($tag),
                 fn ($query) => $query->whereHas('interestTags', function ($tagQuery) use ($tag): void {
                     $tagQuery
-                        ->where('slug', $tag)
-                        ->orWhere('name', $tag)
+                        ->where('slug', 'like', "%{$tag}%")
+                        ->orWhere('name', 'like', "%{$tag}%")
                         ->when(is_numeric($tag), fn ($numericQuery) => $numericQuery->orWhere('id', (int) $tag));
                 })
             )

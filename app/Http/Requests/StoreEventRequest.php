@@ -26,7 +26,7 @@ class StoreEventRequest extends FormRequest
             'description' => ['required', 'string'],
             'startsAt' => ['required', 'date'],
             'endsAt' => ['nullable', 'date', 'after_or_equal:startsAt'],
-            'coverImage' => ['nullable', 'url', 'max:2048'],
+            'coverImage' => $this->coverImageRules(),
             'externalUrl' => ['nullable', 'url', 'max:2048'],
             'cityId' => ['required', 'integer', 'exists:cities,id'],
             'isFeatured' => ['sometimes', 'boolean'],

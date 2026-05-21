@@ -1,4 +1,4 @@
-import { ImagePlus, LoaderCircle, Plus, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, ImagePlus, LoaderCircle, Plus, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { EmptyState } from '../../../shared/components/EmptyState';
@@ -6,9 +6,10 @@ import { ErrorState } from '../../../shared/components/ErrorState';
 import { LoadingState } from '../../../shared/components/LoadingState';
 import { PaginationControls } from '../../../shared/components/PaginationControls';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
+import { useToast } from '../../../shared/components/toast/toastContext';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
 import type { MediaAsset } from '../../../shared/types/api';
-import { AdminPage, AdminSurface, AdminSideSheet } from '../components/AdminUi';
+import { AdminConfirmDialog, AdminPage, AdminSurface, AdminSideSheet } from '../components/AdminUi';
 import { adminButtonClassName, adminInputClassName } from '../components/adminUiStyles';
 import { useAdminMedia, useAdminMediaMutations } from '../hooks/useAdminMedia';
 import type { AdminFeedback } from '../types/admin';
@@ -28,6 +29,13 @@ const formatFileSize = (size: number) => {
 };
 
 type MediaCollectionFilter = MediaAsset['collection'] | 'all';
+type MediaCollection = NonNullable<MediaAsset['collection']>;
+
+const collectionLabels: Record<MediaCollection, string> = {
+  cover: 'Capa',
+  gallery: 'Galeria',
+  general: 'Geral',
+};
 
 export const AdminMediaPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -43,10 +51,12 @@ export const AdminMediaPage = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [collection, setCollection] = useState<MediaAsset['collection']>('general');
   const [altText, setAltText] = useState('');
+  const [pendingDeleteMediaId, setPendingDeleteMediaId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const mediaItems = mediaResponse?.data ?? [];
+  const { showToast } = useToast();
 
   useEffect(() => () => {
     if (previewUrl?.startsWith('blob:')) {
@@ -63,14 +73,14 @@ export const AdminMediaPage = () => {
   }, [selectedFile]);
 
   if (isLoading) {
-    return <LoadingState label="Carregando biblioteca administrativa de mídia..." />;
+    return <LoadingState label="Carregando mídia..." />;
   }
 
   if (isError) {
     return (
       <ErrorState
-        title="Não foi possível carregar a mídia administrativa"
-        description="Verifique a autenticação do painel e a disponibilidade do endpoint de mídia."
+        title="Não foi possível carregar as imagens"
+        description="Tente novamente em instantes ou verifique seu acesso ao painel."
       />
     );
   }
@@ -106,33 +116,48 @@ export const AdminMediaPage = () => {
         type: 'success',
         message: 'Mídia enviada com sucesso.',
       });
+      showToast({
+        type: 'success',
+        title: 'Mídia enviada com sucesso.',
+      });
       resetUploadState();
       setIsFormOpen(false);
     } catch (error) {
+      const message = getApiErrorMessage(error, 'Falha ao enviar a mídia.');
       setFeedback({
         type: 'error',
-        message: getApiErrorMessage(error, 'Falha ao enviar a mídia.'),
+        message,
+      });
+      showToast({
+        type: 'error',
+        title: 'Não foi possível enviar',
+        message,
       });
     }
   };
 
   const handleDelete = async (mediaId: number) => {
-    const confirmed = window.confirm('Tem certeza que deseja remover esta mídia? Esta ação não pode ser desfeita.');
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
       await deleteMedia(mediaId);
       setFeedback({
         type: 'success',
         message: 'Mídia removida com sucesso.',
       });
+      showToast({
+        type: 'success',
+        title: 'Mídia removida com sucesso.',
+      });
+      setPendingDeleteMediaId(null);
     } catch (error) {
+      const message = getApiErrorMessage(error, 'Falha ao remover a mídia.');
       setFeedback({
         type: 'error',
-        message: getApiErrorMessage(error, 'Falha ao remover a mídia.'),
+        message,
+      });
+      showToast({
+        type: 'error',
+        title: 'Não foi possível remover',
+        message,
       });
     }
   };
@@ -141,7 +166,7 @@ export const AdminMediaPage = () => {
     <AdminPage
       actions={
         <button
-          className={adminButtonClassName.primary}
+          className={adminButtonClassName.primaryAction}
           onClick={() => {
             resetUploadState();
             setFeedback(null);
@@ -153,13 +178,13 @@ export const AdminMediaPage = () => {
           Enviar mídia
         </button>
       }
-      description="Envio e organização do acervo visual em uma interface mais enxuta, com preview, metadados e filtro por coleção."
+      description="Envie e organize imagens usadas em capas e galerias."
       eyebrow="Mídia"
-      title="Biblioteca administrativa mais clara para operar"
+      title="Biblioteca de mídia"
     >
       <AdminSurface description="Filtre por coleção e reutilize arquivos já enviados sem sair da tela." meta={`${mediaResponse?.meta.total ?? 0} itens`} title="Arquivos enviados">
         <form
-          className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4 md:grid-cols-[1fr_auto]"
+          className="grid items-center gap-3 md:grid-cols-[minmax(0,1fr)_auto]"
           onSubmit={(event) => {
             event.preventDefault();
             const formData = new FormData(event.currentTarget);
@@ -176,16 +201,19 @@ export const AdminMediaPage = () => {
             setSearchParams(next);
           }}
         >
-          <select
-            className={adminInputClassName}
-            defaultValue={activeCollection}
-            name="collection"
-          >
-            <option value="all">Todas as coleções</option>
-            <option value="general">Geral</option>
-            <option value="cover">Cover</option>
-            <option value="gallery">Gallery</option>
-          </select>
+          <span className="relative block w-full">
+            <select
+              className={`${adminInputClassName} appearance-none pr-10`}
+              defaultValue={activeCollection}
+              name="collection"
+            >
+              <option value="all">Todas as coleções</option>
+              <option value="general">Geral</option>
+              <option value="cover">Capa</option>
+              <option value="gallery">Galeria</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+          </span>
           <button className={adminButtonClassName.primary} type="submit">
             Aplicar
           </button>
@@ -194,39 +222,37 @@ export const AdminMediaPage = () => {
         <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {mediaItems.length ? (
             mediaItems.map((media) => (
-              <article key={media.id} className="overflow-hidden rounded-lg border border-slate-200 bg-white transition-colors hover:border-slate-300 shadow-sm flex flex-col">
-                <img alt={media.altText ?? media.originalName ?? `Mídia ${media.id}`} className="h-48 w-full object-cover border-b border-slate-100" src={media.url} />
-                <div className="flex-1 space-y-3 p-4 flex flex-col">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-semibold text-slate-900 truncate" title={media.originalName}>{media.originalName ?? `Arquivo #${media.id}`}</h3>
-                      <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-teal-700">{media.collection ?? 'general'}</p>
-                    </div>
+              <article key={media.id} className="flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm transition-colors hover:border-slate-300">
+                <img alt={media.altText ?? media.originalName ?? `Mídia ${media.id}`} className="h-48 w-full border-b border-slate-100 object-cover" src={media.url} />
+                <div className="flex flex-1 flex-col space-y-3 p-4">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-semibold text-slate-900" title={media.originalName}>{media.originalName ?? `Arquivo #${media.id}`}</h3>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-teal-700">{collectionLabels[media.collection ?? 'general']}</p>
                   </div>
 
-                  <p className="text-xs leading-relaxed text-slate-500 line-clamp-2 flex-1" title={media.altText || 'Sem texto alternativo'}>
+                  <p className="line-clamp-2 flex-1 text-xs leading-relaxed text-slate-500" title={media.altText || 'Sem texto alternativo'}>
                     {media.altText || 'Sem texto alternativo informado.'}
                   </p>
 
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
-                    <span className="text-xs font-medium text-slate-500">
+                  <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-2">
+                    <span className="shrink-0 text-xs font-medium text-slate-500">
                       {formatFileSize(media.size)}
                     </span>
-                    <div className="flex gap-2">
+                    <div className="ml-auto flex shrink-0 gap-2">
                       <a
                         className={adminButtonClassName.ghost}
                         href={media.url}
                         rel="noreferrer"
                         target="_blank"
-                        title="Ver preview"
+                        title="Visualizar imagem"
                       >
                         <ImagePlus className="h-4 w-4" />
                       </a>
                       <button
-                        className="rounded-md px-2 py-1 text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-50"
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-md text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50"
                         disabled={deleting}
                         onClick={() => {
-                          void handleDelete(media.id);
+                          setPendingDeleteMediaId(media.id);
                         }}
                         type="button"
                         title="Remover"
@@ -270,7 +296,7 @@ export const AdminMediaPage = () => {
         <FormAlert feedback={feedback} />
 
         <div className="mt-6 space-y-6">
-          <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 flex flex-col items-center justify-center text-center">
+          <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
             <input
               accept={acceptedFileTypes}
               className="sr-only"
@@ -293,7 +319,7 @@ export const AdminMediaPage = () => {
 
             {!previewUrl ? (
               <div className="flex flex-col items-center">
-                <div className="h-12 w-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-4">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-md bg-emerald-100 text-emerald-600">
                   <Upload className="h-6 w-6" />
                 </div>
                 <button
@@ -306,13 +332,13 @@ export const AdminMediaPage = () => {
                   Selecionar imagem
                 </button>
                 <p className="mt-3 text-xs text-slate-500">
-                  Permitido: JPG, PNG, WEBP (até 5 MB)
+                  Permitido: JPG, PNG, WEBP (até 15 MB)
                 </p>
               </div>
             ) : null}
 
             {selectedFileMetadata ? (
-              <div className="mt-4 w-full rounded-md bg-white px-4 py-3 text-sm text-slate-700 shadow-sm border border-slate-200">
+              <div className="mt-4 w-full rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
                 {selectedFileMetadata}
               </div>
             ) : null}
@@ -320,9 +346,9 @@ export const AdminMediaPage = () => {
             {previewUrl ? (
               <div className="mt-4 w-full overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
                 <img alt="Pré-visualização da mídia selecionada" className="h-48 w-full object-cover" src={previewUrl} />
-                <div className="p-2 border-t border-slate-200">
-                   <button
-                    className="w-full text-xs font-semibold text-rose-600 hover:text-rose-800 py-1"
+                <div className="border-t border-slate-200 p-2">
+                  <button
+                    className="w-full py-1 text-xs font-semibold text-rose-600 hover:text-rose-800"
                     onClick={resetUploadState}
                     type="button"
                   >
@@ -334,7 +360,7 @@ export const AdminMediaPage = () => {
           </div>
 
           <div className="space-y-4">
-            <label className="space-y-2 block text-sm font-semibold text-slate-700">
+            <label className="block space-y-2 text-sm font-semibold text-slate-700">
               <span>Coleção</span>
               <select
                 className={adminInputClassName}
@@ -344,12 +370,12 @@ export const AdminMediaPage = () => {
                 value={collection ?? 'general'}
               >
                 <option value="general">Geral</option>
-                <option value="cover">Cover</option>
-                <option value="gallery">Gallery</option>
+                <option value="cover">Capa</option>
+                <option value="gallery">Galeria</option>
               </select>
             </label>
 
-            <label className="space-y-2 block text-sm font-semibold text-slate-700">
+            <label className="block space-y-2 text-sm font-semibold text-slate-700">
               <span>Texto alternativo</span>
               <input
                 className={adminInputClassName}
@@ -363,7 +389,7 @@ export const AdminMediaPage = () => {
             </label>
           </div>
 
-          <div className="flex flex-col gap-3 pt-4 border-t border-slate-100">
+          <div className="flex flex-col gap-3 border-t border-slate-100 pt-4">
             <button
               className={adminButtonClassName.primary}
               disabled={!selectedFile || uploading}
@@ -386,7 +412,20 @@ export const AdminMediaPage = () => {
           </div>
         </div>
       </AdminSideSheet>
+
+      <AdminConfirmDialog
+        confirmLabel="Remover"
+        description="Esta ação não pode ser desfeita e removerá a mídia da biblioteca administrativa."
+        isConfirming={deleting}
+        isOpen={pendingDeleteMediaId !== null}
+        onClose={() => setPendingDeleteMediaId(null)}
+        onConfirm={() => {
+          if (pendingDeleteMediaId !== null) {
+            void handleDelete(pendingDeleteMediaId);
+          }
+        }}
+        title="Remover mídia?"
+      />
     </AdminPage>
   );
 };
-

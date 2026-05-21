@@ -1,12 +1,18 @@
 import type { AdminValidationErrors, CityFormValues, EventFormValues } from '../types/admin';
 
 const isValidUrl = (value: string) => {
-  if (!value.trim()) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return true;
+  }
+
+  if (trimmedValue.startsWith('/storage/tourism/media/')) {
     return true;
   }
 
   try {
-    new URL(value);
+    new URL(trimmedValue);
     return true;
   } catch {
     return false;
@@ -33,7 +39,7 @@ export const validateCityForm = (values: CityFormValues): AdminValidationErrors 
   }
 
   if (!isValidUrl(values.coverImage)) {
-    errors.coverImage = 'Informe uma URL válida para a imagem.';
+    errors.coverImage = 'Informe um link válido para a imagem.';
   }
 
   values.attractions.forEach((attraction, index) => {
@@ -47,7 +53,7 @@ export const validateCityForm = (values: CityFormValues): AdminValidationErrors 
     }
 
     if (!isValidUrl(attraction.imageUrl)) {
-      errors[`attractions.${index}.imageUrl`] = 'Informe uma URL válida para a imagem da atração.';
+      errors[`attractions.${index}.imageUrl`] = 'Informe um link válido para a imagem da atração.';
     }
   });
 
@@ -84,11 +90,11 @@ export const validateEventForm = (values: EventFormValues): AdminValidationError
   }
 
   if (!isValidUrl(values.coverImage)) {
-    errors.coverImage = 'Informe uma URL válida para a imagem.';
+    errors.coverImage = 'Informe um link válido para a imagem.';
   }
 
   if (!isValidUrl(values.externalUrl)) {
-    errors.externalUrl = 'Informe uma URL válida para o link externo.';
+    errors.externalUrl = 'Informe um link externo válido.';
   }
 
   values.gallery.forEach((item, index) => {

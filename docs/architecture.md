@@ -108,7 +108,7 @@ Características:
 
 - upload validado via `StoreMediaAssetRequest`
 - tipos permitidos: `jpg`, `jpeg`, `png`, `webp`
-- tamanho máximo: `5120 KB`
+- tamanho máximo: `15360 KB`
 - armazenamento em `public/tourism/media/YYYY/MM`
 - serialização via `MediaAssetResource`
 

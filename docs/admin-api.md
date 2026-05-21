@@ -219,7 +219,7 @@ Regras:
 
 - apenas imagens
 - extensões permitidas: `jpg`, `jpeg`, `png`, `webp`
-- tamanho máximo: `5 MB`
+- tamanho máximo: `15 MB`
 
 Resposta esperada:
 

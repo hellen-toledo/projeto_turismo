@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class MediaAssetResource extends JsonResource
 {
@@ -12,7 +11,7 @@ class MediaAssetResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'url' => Storage::disk($this->disk)->url($this->path),
+            'url' => '/storage/'.ltrim($this->path, '/'),
             'path' => $this->path,
             'originalName' => $this->original_name,
             'mimeType' => $this->mime_type,

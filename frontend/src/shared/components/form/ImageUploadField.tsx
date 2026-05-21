@@ -2,6 +2,7 @@ import { ImageIcon, Link as LinkIcon, LoaderCircle, Trash2, Upload } from 'lucid
 import { useEffect, useRef, useState } from 'react';
 import type { MediaAsset } from '../../types/api';
 import { getApiErrorMessage } from '../../lib/api/getApiErrorMessage';
+import { resolveAssetUrl } from '../../lib/api/resolveAssetUrl';
 import { FormField } from './FormField';
 
 type UploadCollection = 'cover' | 'gallery' | 'general';
@@ -18,8 +19,10 @@ interface ImageUploadFieldProps {
   uploadCollection?: UploadCollection;
   onUpload?: (file: File, options: { altText: string; collection: UploadCollection }) => Promise<MediaAsset>;
   onUploadComplete?: (media: MediaAsset) => void;
+  onUploadStateChange?: (isUploading: boolean) => void;
   allowManualUrl?: boolean;
   showAltText?: boolean;
+  requiredMark?: boolean;
 }
 
 type UploadStatus = 'idle' | 'uploading' | 'success' | 'error';
@@ -46,10 +49,12 @@ export const ImageUploadField = ({
   onChange,
   onUpload,
   onUploadComplete,
+  onUploadStateChange,
   uploadCollection = 'cover',
   value,
   allowManualUrl = true,
   showAltText = true,
+  requiredMark = false,
 }: ImageUploadFieldProps) => {
   const [internalAltText, setInternalAltText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -101,6 +106,33 @@ export const ImageUploadField = ({
     onChange(nextValue);
   };
 
+  const uploadFile = async (file: File) => {
+    setStatus('uploading');
+    setStatusMessage('Enviando imagem...');
+    onUploadStateChange?.(true);
+
+    try {
+      if (!onUpload) {
+        throw new Error('Upload indisponível para este campo.');
+      }
+
+      const media = await onUpload(file, {
+        altText: resolvedAltText,
+        collection: uploadCollection,
+      });
+
+      onChange(media.url);
+      onUploadComplete?.(media);
+      setStatus('success');
+      setStatusMessage('Upload concluído com sucesso.');
+    } catch (uploadError) {
+      setStatus('error');
+      setStatusMessage(getApiErrorMessage(uploadError, 'Falha ao enviar a imagem.'));
+    } finally {
+      onUploadStateChange?.(false);
+    }
+  };
+
   const handleFileSelection = (file: File | null) => {
     if (!file) {
       return;
@@ -119,6 +151,8 @@ export const ImageUploadField = ({
     } else {
       setPreviewUrl(null);
     }
+
+    void uploadFile(file);
   };
 
   const handleUpload = async () => {
@@ -126,27 +160,7 @@ export const ImageUploadField = ({
       return;
     }
 
-    setStatus('uploading');
-    setStatusMessage('Enviando imagem...');
-
-    try {
-      if (!onUpload) {
-        throw new Error('Upload indisponível para este campo.');
-      }
-
-      const media = await onUpload(selectedFile, {
-        altText: resolvedAltText,
-        collection: uploadCollection,
-      });
-
-      onChange(media.url);
-      onUploadComplete?.(media);
-      setStatus('success');
-      setStatusMessage('Upload concluído com sucesso.');
-    } catch (uploadError) {
-      setStatus('error');
-      setStatusMessage(getApiErrorMessage(uploadError, 'Falha ao enviar a imagem.'));
-    }
+    await uploadFile(selectedFile);
   };
 
   const handleClear = () => {
@@ -155,19 +169,19 @@ export const ImageUploadField = ({
     onChange('');
   };
 
-  const currentPreview = previewUrl || value;
+  const currentPreview = previewUrl || resolveAssetUrl(value);
 
   return (
-    <FormField htmlFor={id} label={label}>
-      <div className="grid gap-4 rounded-3xl border border-dashed border-slate-300 bg-white p-4 md:grid-cols-[1.2fr_0.8fr]">
+    <FormField htmlFor={id} label={label} required={requiredMark}>
+      <div className="grid gap-4 rounded-md border border-dashed border-slate-300 bg-white p-4 md:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-4">
           <div className="relative">
-            <LinkIcon className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <LinkIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               aria-disabled={!allowManualUrl}
               aria-describedby={describedBy}
               className={[
-                'w-full rounded-2xl border bg-white py-3 pl-11 pr-4 text-sm text-slate-900 outline-none transition-colors',
+                'h-10 w-full rounded-md border bg-white pl-9 pr-3 text-sm text-slate-900 outline-none transition-colors',
                 error ? 'border-rose-300 focus:border-rose-500' : 'border-slate-200 focus:border-emerald-500',
                 !allowManualUrl ? 'cursor-not-allowed bg-slate-100 text-slate-400' : '',
               ].join(' ')}
@@ -177,16 +191,17 @@ export const ImageUploadField = ({
                 handleUrlChange(event.target.value);
               }}
               placeholder="https://exemplo.com/imagem.jpg"
-              type="url"
+              inputMode="url"
+              type="text"
               value={value}
             />
           </div>
 
-          <div className={showAltText ? 'grid gap-3 sm:grid-cols-[1fr_auto]' : 'flex flex-wrap gap-2'}>
+          <div className={showAltText ? 'space-y-3' : 'flex flex-wrap gap-2'}>
             {showAltText ? (
               <input
                 aria-describedby={describedBy}
-                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors focus:border-emerald-500"
+                className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus:border-emerald-500"
                 id={`${id}-alt-text`}
                 onChange={(event) => {
                   setAltTextValue(event.target.value);
@@ -209,7 +224,7 @@ export const ImageUploadField = ({
                 type="file"
               />
               <button
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
                 onClick={() => {
                   fileInputRef.current?.click();
                 }}
@@ -219,7 +234,7 @@ export const ImageUploadField = ({
                 Escolher arquivo
               </button>
               <button
-                className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+                className="inline-flex h-10 items-center gap-2 rounded-md bg-emerald-600 px-3 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
                 disabled={!selectedFile || status === 'uploading'}
                 onClick={() => {
                   void handleUpload();
@@ -230,7 +245,7 @@ export const ImageUploadField = ({
                 Enviar imagem
               </button>
               <button
-                className="inline-flex items-center gap-2 rounded-full border border-rose-200 px-4 py-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-rose-200 px-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
                 onClick={handleClear}
                 type="button"
               >
@@ -241,7 +256,7 @@ export const ImageUploadField = ({
           </div>
 
           {selectedFile ? (
-            <div className="rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            <div className="rounded-md bg-slate-50 px-4 py-3 text-sm text-slate-600">
               <p className="font-semibold text-slate-800">{selectedFile.name}</p>
               <p className="mt-1">{formatFileSize(selectedFile.size)}</p>
             </div>
@@ -274,7 +289,7 @@ export const ImageUploadField = ({
           ) : null}
         </div>
 
-        <div className="flex min-h-40 items-center justify-center overflow-hidden rounded-2xl bg-slate-100">
+        <div className="flex min-h-40 items-center justify-center overflow-hidden rounded-md bg-slate-100">
           {currentPreview ? (
             <img alt="Pré-visualização" className="h-full w-full object-cover" src={currentPreview} />
           ) : (

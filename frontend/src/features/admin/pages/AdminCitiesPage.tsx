@@ -1,4 +1,4 @@
-import { MapPinned, PencilLine, Plus, Trash2 } from 'lucide-react';
+import { Eye, MapPinned, PencilLine, Plus, Trash2, Waypoints } from 'lucide-react';
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { EmptyState } from '../../../shared/components/EmptyState';
@@ -6,8 +6,9 @@ import { ErrorState } from '../../../shared/components/ErrorState';
 import { LoadingState } from '../../../shared/components/LoadingState';
 import { PaginationControls } from '../../../shared/components/PaginationControls';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
+import { useToast } from '../../../shared/components/toast/toastContext';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
-import { AdminDataTable, AdminKpi, AdminPage, AdminSearchToolbar, AdminSelectFilter, AdminStatusBadge, AdminSurface, AdminSideSheet } from '../components/AdminUi';
+import { AdminConfirmDialog, AdminDataTable, AdminKpi, AdminPage, AdminSearchToolbar, AdminSelectFilter, AdminStatusBadge, AdminSurface, AdminSideSheet } from '../components/AdminUi';
 import { adminButtonClassName, adminInputClassName } from '../components/adminUiStyles';
 import { CityForm } from '../forms/CityForm';
 import { getCityDisplayStatus, useAdminCities, useAdminCity, useAdminCityMutations } from '../hooks/useAdminCities';
@@ -35,48 +36,55 @@ export const AdminCitiesPage = () => {
   const { deleteCity, deleting } = useAdminCityMutations();
   const [selectedCityId, setSelectedCityId] = useState<number | null>(null);
   const { data: selectedCity, isLoading: loadingSelectedCity } = useAdminCity(selectedCityId);
+  const [pendingDeleteCityId, setPendingDeleteCityId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const { showToast } = useToast();
   
   const cities = citiesResponse?.data ?? [];
   const publishedCount = cities.filter((city) => city.isPublished).length;
   const withRegionCount = cities.filter((city) => city.region?.name).length;
 
   if (loadingCities || loadingRegions || loadingTags) {
-    return <LoadingState label="Carregando base administrativa de cidades..." />;
+    return <LoadingState label="Carregando cidades..." />;
   }
 
   if (citiesError || regionsError || tagsError) {
     return (
       <ErrorState
-        description="Verifique a autenticação administrativa e a disponibilidade da API."
+        description="Tente novamente em instantes ou verifique seu acesso ao painel."
         title="Não foi possível carregar o módulo de cidades"
       />
     );
   }
 
   const handleDelete = async (cityId: number) => {
-    const confirmed = window.confirm('Tem certeza que deseja excluir esta cidade? Esta ação não pode ser desfeita.');
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
       await deleteCity(cityId);
       setFeedback({
         type: 'success',
         message: 'Cidade removida com sucesso.',
       });
+      showToast({
+        type: 'success',
+        title: 'Cidade removida com sucesso.',
+      });
+      setPendingDeleteCityId(null);
 
       if (selectedCityId === cityId) {
         setIsFormOpen(false);
         setSelectedCityId(null);
       }
     } catch (error) {
+      const message = getApiErrorMessage(error, 'Falha ao remover a cidade.');
       setFeedback({
         type: 'error',
-        message: getApiErrorMessage(error, 'Falha ao remover a cidade.'),
+        message,
+      });
+      showToast({
+        type: 'error',
+        title: 'Não foi possível remover',
+        message,
       });
     }
   };
@@ -91,7 +99,7 @@ export const AdminCitiesPage = () => {
     <AdminPage
       actions={
         <button
-          className={adminButtonClassName.primary}
+          className={adminButtonClassName.primaryAction}
           onClick={() => handleOpenForm(null)}
           type="button"
         >
@@ -99,14 +107,14 @@ export const AdminCitiesPage = () => {
           Nova cidade
         </button>
       }
-      description="Controle o catálogo de cidades, regiões associadas e conteúdo editorial do destino sem alterar o fluxo atual de desenvolvimento."
+      description="Controle cidades, regiões associadas e conteúdo editorial dos destinos."
       eyebrow="Gestão territorial"
       title="Cidades"
     >
       <section className="grid gap-4 md:grid-cols-3">
-        <AdminKpi hint="Total retornado na consulta atual." icon={<MapPinned className="h-5 w-5" />} label="Cidades carregadas" value={citiesResponse?.meta.total ?? 0} />
-        <AdminKpi hint="Registros com publicação ativa no recorte carregado." icon={<Plus className="h-5 w-5" />} label="Publicadas" value={publishedCount} />
-        <AdminKpi hint="Cidades já vinculadas a uma região." icon={<PencilLine className="h-5 w-5" />} label="Com região" value={withRegionCount} />
+        <AdminKpi hint="Total de cidades encontradas." icon={<MapPinned className="h-5 w-5" />} label="Cidades carregadas" value={citiesResponse?.meta.total ?? 0} />
+        <AdminKpi hint="Cidades visíveis no portal público." icon={<Eye className="h-5 w-5" />} label="Publicadas" value={publishedCount} />
+        <AdminKpi hint="Cidades já vinculadas a uma região." icon={<Waypoints className="h-5 w-5" />} label="Com região" value={withRegionCount} />
       </section>
 
       <AdminSurface
@@ -141,7 +149,7 @@ export const AdminCitiesPage = () => {
         >
           <AdminSearchToolbar
             filterInput={
-              <div className="flex flex-wrap gap-2">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
                 <AdminSelectFilter defaultValue={searchParams.get('published') ?? ''} name="published" options={publishedOptions} />
                 <button className={adminButtonClassName.primary} type="submit">
                   Aplicar
@@ -167,9 +175,9 @@ export const AdminCitiesPage = () => {
         <div className="mt-6">
           <AdminDataTable
             actions={(city) => (
-              <div className="flex justify-end gap-2">
+              <div className="flex min-w-max items-center justify-end gap-2">
                 <button
-                  className={adminButtonClassName.secondary}
+                  className={`${adminButtonClassName.secondary} min-w-24`}
                   onClick={() => handleOpenForm(city.id)}
                   type="button"
                 >
@@ -177,10 +185,10 @@ export const AdminCitiesPage = () => {
                   Editar
                 </button>
                 <button
-                  className={adminButtonClassName.danger}
+                  className={`${adminButtonClassName.danger} min-w-24`}
                   disabled={deleting}
                   onClick={() => {
-                    void handleDelete(city.id);
+                    setPendingDeleteCityId(city.id);
                   }}
                   type="button"
                 >
@@ -244,7 +252,7 @@ export const AdminCitiesPage = () => {
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         title={selectedCityId ? 'Editar cidade' : 'Nova cidade'}
-        description="Fluxo real para cadastro e edição do catálogo de cidades."
+        description="Cadastre e edite as informações da cidade."
       >
         <CityForm
           city={selectedCity}
@@ -255,6 +263,19 @@ export const AdminCitiesPage = () => {
           onSuccess={() => setIsFormOpen(false)}
         />
       </AdminSideSheet>
+
+      <AdminConfirmDialog
+        description="Esta ação não pode ser desfeita e removerá a cidade do catálogo administrativo."
+        isConfirming={deleting}
+        isOpen={pendingDeleteCityId !== null}
+        onClose={() => setPendingDeleteCityId(null)}
+        onConfirm={() => {
+          if (pendingDeleteCityId !== null) {
+            void handleDelete(pendingDeleteCityId);
+          }
+        }}
+        title="Excluir cidade?"
+      />
     </AdminPage>
   );
 };

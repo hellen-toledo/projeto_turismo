@@ -25,12 +25,20 @@ vi.mock('../../../../shared/components/form/ImageUploadField', () => ({
     label,
     onAltTextChange,
     onChange,
+    onUploadComplete,
     value,
   }: {
     altText?: string;
     label: string;
     onAltTextChange?: (value: string) => void;
     onChange: (value: string) => void;
+    onUploadComplete?: (media: {
+      id: number;
+      url: string;
+      altText?: string | null;
+      originalName?: string;
+      size: number;
+    }) => void;
     value: string;
   }) => (
     <div>
@@ -52,9 +60,26 @@ vi.mock('../../../../shared/components/form/ImageUploadField', () => ({
             onChange={(event) => {
               onAltTextChange(event.target.value);
             }}
-            value={altText ?? ''}
-          />
-        </label>
+          value={altText ?? ''}
+        />
+      </label>
+      ) : null}
+      {onUploadComplete ? (
+        <button
+          onClick={() => {
+            onUploadComplete({
+              id: 99,
+              url: '/storage/tourism/media/2026/05/cidade.jpg',
+              altText: 'Cidade enviada',
+              originalName: 'cidade.jpg',
+              size: 2048,
+            });
+            onChange('/storage/tourism/media/2026/05/cidade.jpg');
+          }}
+          type="button"
+        >
+          Simular upload {label}
+        </button>
       ) : null}
     </div>
   ),
@@ -129,6 +154,42 @@ describe('CityForm', () => {
           description: 'Destino turístico no norte goiano.',
           coverImage: 'https://example.com/cover.jpg',
           regionId: '1',
+        }),
+      );
+    });
+  });
+
+  it('vincula upload local da capa como mídia real da galeria', async () => {
+    const user = userEvent.setup();
+    mockCreateCity.mockResolvedValue({});
+
+    renderWithProviders(
+      <CityForm
+        regionOptions={regionOptions}
+        tagOptions={tagOptions}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Nome da cidade'), { target: { value: 'Porangatu' } });
+    fireEvent.change(screen.getByPlaceholderText('Descreva atrativos, contexto regional e diferenciais turísticos.'), {
+      target: { value: 'Destino turístico no norte goiano.' },
+    });
+    fireEvent.change(screen.getByLabelText('Região'), { target: { value: '1' } });
+
+    await user.click(screen.getByRole('button', { name: 'Simular upload Imagem de capa' }));
+    await user.click(screen.getByRole('button', { name: 'Criar cidade' }));
+
+    await waitFor(() => {
+      expect(mockCreateCity).toHaveBeenCalledWith(
+        expect.objectContaining({
+          coverImage: '/storage/tourism/media/2026/05/cidade.jpg',
+          gallery: [
+            expect.objectContaining({
+              mediaAssetId: 99,
+              url: '/storage/tourism/media/2026/05/cidade.jpg',
+              isCover: true,
+            }),
+          ],
         }),
       );
     });

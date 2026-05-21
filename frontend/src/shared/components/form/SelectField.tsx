@@ -8,6 +8,7 @@ interface SelectFieldProps extends SelectHTMLAttributes<HTMLSelectElement> {
   placeholder?: string;
   error?: string;
   hint?: string;
+  requiredMark?: boolean;
 }
 
 export const SelectField = ({
@@ -17,13 +18,14 @@ export const SelectField = ({
   label,
   options,
   placeholder = 'Selecione uma opção',
+  requiredMark = false,
   ...props
 }: SelectFieldProps) => {
   return (
-    <FormField error={error} hint={hint} htmlFor={id} label={label}>
+    <FormField error={error} hint={hint} htmlFor={id} label={label} required={requiredMark}>
       <select
         className={[
-          'w-full rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-colors',
+          'h-10 w-full rounded-md border bg-white px-3 text-sm text-slate-900 outline-none transition-colors',
           error ? 'border-rose-300 focus:border-rose-500' : 'border-slate-200 focus:border-emerald-500',
         ].join(' ')}
         id={id}

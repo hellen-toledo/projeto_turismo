@@ -248,6 +248,7 @@ class AdminApiTest extends TestCase
             ->assertJsonPath('region.name', 'Chapada dos Veadeiros')
             ->assertJsonPath('attractions.0.name', 'Mirante Central')
             ->assertJsonPath('attractions.0.isPublished', true)
+            ->assertJsonPath('coverImage', '/storage/tourism/media/2026/04/admin-cover.jpg')
             ->assertJsonPath('gallery.0.id', $coverMedia->id)
             ->assertJsonPath('gallery.0.isCover', true);
 
@@ -368,6 +369,125 @@ class AdminApiTest extends TestCase
         $this->postJson('/api/v1/admin/events', [])
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['title', 'description', 'startsAt', 'cityId']);
+    }
+
+    public function test_admin_can_update_event_with_local_uploaded_cover_image(): void
+    {
+        $this->authenticateAsAdmin();
+
+        $city = City::factory()->create();
+        $galleryCover = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/05/old-gallery-cover.jpg',
+        ]);
+        $event = Event::factory()->for($city)->create([
+            'cover_image' => 'https://example.com/old-cover.jpg',
+        ]);
+        $event->galleryMediaAssets()->attach($galleryCover->id, [
+            'sort_order' => 0,
+            'alt_text' => 'Capa antiga da galeria',
+            'is_cover' => true,
+        ]);
+
+        $localCoverImage = '/storage/tourism/media/2026/05/event-cover.jpg';
+        $storedCoverPath = 'tourism/media/2026/05/event-cover.jpg';
+
+        $this->patchJson("/api/v1/admin/events/{$event->id}", [
+            'coverImage' => $localCoverImage,
+        ])
+            ->assertOk()
+            ->assertJsonPath('coverImage', '/storage/'.$storedCoverPath);
+
+        $this->assertDatabaseHas('events', [
+            'id' => $event->id,
+            'cover_image' => $storedCoverPath,
+        ]);
+    }
+
+    public function test_admin_can_update_city_with_local_uploaded_cover_url_from_any_host(): void
+    {
+        $this->authenticateAsAdmin();
+
+        $city = City::factory()->create([
+            'cover_image' => 'https://example.com/old-cover.jpg',
+        ]);
+
+        $storedCoverPath = 'tourism/media/2026/05/city-cover.jpg';
+
+        $this->patchJson("/api/v1/admin/cities/{$city->id}", [
+            'coverImage' => 'https://painel.example.test/storage/'.$storedCoverPath,
+        ])
+            ->assertOk()
+            ->assertJsonPath('coverImage', '/storage/'.$storedCoverPath);
+
+        $this->assertDatabaseHas('cities', [
+            'id' => $city->id,
+            'cover_image' => $storedCoverPath,
+        ]);
+    }
+
+    public function test_admin_can_promote_city_gallery_image_to_cover(): void
+    {
+        $this->authenticateAsAdmin();
+
+        $city = City::factory()->create([
+            'cover_image' => 'https://example.com/old-city-cover.jpg',
+        ]);
+        $newCover = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/05/new-city-gallery-cover.jpg',
+        ]);
+
+        $this->patchJson("/api/v1/admin/cities/{$city->id}", [
+            'gallery' => [
+                [
+                    'mediaAssetId' => $newCover->id,
+                    'sortOrder' => 0,
+                    'altText' => 'Nova capa da cidade',
+                    'isCover' => true,
+                ],
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('coverImage', '/storage/tourism/media/2026/05/new-city-gallery-cover.jpg')
+            ->assertJsonPath('gallery.0.isCover', true);
+
+        $this->assertDatabaseHas('cities', [
+            'id' => $city->id,
+            'cover_image' => 'tourism/media/2026/05/new-city-gallery-cover.jpg',
+        ]);
+    }
+
+    public function test_admin_can_promote_event_gallery_image_to_cover(): void
+    {
+        $this->authenticateAsAdmin();
+
+        $event = Event::factory()->create([
+            'cover_image' => 'https://example.com/old-event-cover.jpg',
+        ]);
+        $newCover = MediaAsset::factory()->create([
+            'disk' => 'public',
+            'path' => 'tourism/media/2026/05/new-event-gallery-cover.jpg',
+        ]);
+
+        $this->patchJson("/api/v1/admin/events/{$event->id}", [
+            'gallery' => [
+                [
+                    'mediaAssetId' => $newCover->id,
+                    'sortOrder' => 0,
+                    'altText' => 'Nova capa do evento',
+                    'isCover' => true,
+                ],
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('coverImage', '/storage/tourism/media/2026/05/new-event-gallery-cover.jpg')
+            ->assertJsonPath('gallery.0.isCover', true);
+
+        $this->assertDatabaseHas('events', [
+            'id' => $event->id,
+            'cover_image' => 'tourism/media/2026/05/new-event-gallery-cover.jpg',
+        ]);
     }
 
     public function test_admin_city_listing_supports_search_filters_and_draft_visibility(): void

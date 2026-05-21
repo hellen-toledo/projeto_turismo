@@ -25,7 +25,7 @@ class StoreCityRequest extends FormRequest
             'slug' => ['nullable', 'string', 'max:255'],
             'summary' => ['nullable', 'string', 'max:500'],
             'description' => ['required', 'string'],
-            'coverImage' => ['nullable', 'url', 'max:2048'],
+            'coverImage' => $this->coverImageRules(),
             'regionId' => ['required', 'integer', 'exists:regions,id'],
             'isPublished' => ['sometimes', 'boolean'],
             ...$this->interestTagRules(),

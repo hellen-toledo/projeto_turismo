@@ -1,12 +1,11 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '../../../../test/utils';
 import { AdminRegionsPage } from '../AdminRegionsPage';
 
-const { mockDeleteRegion, mockConfirm, mockUseAdminRegions } = vi.hoisted(() => ({
+const { mockDeleteRegion, mockUseAdminRegions } = vi.hoisted(() => ({
   mockDeleteRegion: vi.fn(),
-  mockConfirm: vi.fn(),
   mockUseAdminRegions: vi.fn(),
 }));
 
@@ -26,9 +25,7 @@ describe('AdminRegionsPage', () => {
   beforeEach(() => {
     mockDeleteRegion.mockReset();
     mockDeleteRegion.mockResolvedValue(undefined);
-    mockConfirm.mockReset();
     mockUseAdminRegions.mockReset();
-    vi.stubGlobal('confirm', mockConfirm);
   });
 
   it('renderiza a listagem de regiões', () => {
@@ -59,7 +56,6 @@ describe('AdminRegionsPage', () => {
 
   it('confirma antes de excluir a região', async () => {
     const user = userEvent.setup();
-    mockConfirm.mockReturnValue(true);
     mockUseAdminRegions.mockReturnValue({
       data: [{ id: 1, name: 'Norte', citiesCount: 4 }],
       isLoading: false,
@@ -69,8 +65,10 @@ describe('AdminRegionsPage', () => {
     renderWithProviders(<AdminRegionsPage />);
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    const dialog = screen.getByRole('dialog');
 
-    expect(mockConfirm).toHaveBeenCalledWith('Tem certeza que deseja excluir esta região?');
+    expect(within(dialog).getByText('Excluir região?')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }));
     expect(mockDeleteRegion).toHaveBeenCalledWith(1);
   });
 });

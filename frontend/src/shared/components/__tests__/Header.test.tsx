@@ -24,7 +24,7 @@ describe('Header', () => {
     expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Eventos' })).toHaveAttribute('href', '/eventos');
     expect(screen.getByRole('link', { name: 'Cidades' })).toHaveAttribute('href', '/cidades');
-    expect(screen.getByRole('link', { name: 'Visualizar destinos' })).toHaveAttribute('href', '/cidades');
+    expect(screen.getByRole('link', { name: 'Login administrativo' })).toHaveAttribute('href', '/admin/login');
   });
 
   it('supports basic navigation through the menu', async () => {
@@ -47,4 +47,3 @@ describe('Header', () => {
     expect(screen.getByTestId('location-display')).toHaveTextContent('/');
   });
 });
-

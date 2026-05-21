@@ -1,6 +1,6 @@
 import { ImagePlus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import type { Event } from '../../../shared/types/api';
+import type { Event, MediaAsset } from '../../../shared/types/api';
 import { FormActions } from '../../../shared/components/form/FormActions';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { ImageUploadField } from '../../../shared/components/form/ImageUploadField';
@@ -9,13 +9,15 @@ import { TagMultiSelect } from '../../../shared/components/form/TagMultiSelect';
 import { TextInput } from '../../../shared/components/form/TextInput';
 import { TextareaField } from '../../../shared/components/form/TextareaField';
 import { ToggleField } from '../../../shared/components/form/ToggleField';
+import { useToast } from '../../../shared/components/toast/toastContext';
 import { getApiErrorMessage, getApiValidationErrors } from '../../../shared/lib/api/getApiErrorMessage';
 import { uploadAdminMedia } from '../api/adminMediaApi';
 import { adminButtonClassName } from '../components/adminUiStyles';
 import { useAdminEventMutations } from '../hooks/useAdminEvents';
 import type { AdminFeedback, AdminOption, AdminValidationErrors, EventFormValues } from '../types/admin';
-import { createEmptyEventForm, mapEventToFormValues } from '../types/admin';
+import { createEmptyEventForm, mapEventToFormValues, mapMediaAssetToGalleryFormValue } from '../types/admin';
 import { useGalleryItems } from './useGalleryItems';
+import { getValidationSummary } from './validationSummary';
 import { validateEventForm } from './validators';
 
 interface EventFormProps {
@@ -33,15 +35,27 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
   const [values, setValues] = useState<EventFormValues>(createInitialValues);
   const [errors, setErrors] = useState<AdminValidationErrors>({});
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
+  const [pendingUploadCount, setPendingUploadCount] = useState(0);
   const { createEvent, updateEvent, creating, updating } = useAdminEventMutations();
+  const { showToast } = useToast();
 
-  const isSubmitting = creating || updating;
+  const isUploadingImage = pendingUploadCount > 0;
+  const isSubmitting = creating || updating || isUploadingImage;
 
-  const setFieldValue = <Key extends keyof EventFormValues>(field: Key, value: EventFormValues[Key]) => {
+  const setFieldValue = <Key extends keyof EventFormValues>(
+    field: Key,
+    value: EventFormValues[Key] | ((currentValue: EventFormValues[Key]) => EventFormValues[Key]),
+  ) => {
     setValues((current) => ({
       ...current,
-      [field]: value,
+      [field]: typeof value === 'function'
+        ? (value as (currentValue: EventFormValues[Key]) => EventFormValues[Key])(current[field])
+        : value,
     }));
+  };
+
+  const handleUploadStateChange = (isUploading: boolean) => {
+    setPendingUploadCount((current) => Math.max(0, current + (isUploading ? 1 : -1)));
   };
 
   const {
@@ -49,7 +63,27 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
     markGalleryCover,
     removeGalleryItem,
     updateGalleryItem,
-  } = useGalleryItems(values.gallery, (gallery) => setFieldValue('gallery', gallery));
+  } = useGalleryItems((gallery) => setFieldValue('gallery', gallery));
+
+  const syncUploadedCoverWithGallery = (media: MediaAsset) => {
+    setFieldValue('gallery', (currentGallery) => {
+      const existingIndex = currentGallery.findIndex((item) => item.mediaAssetId === media.id);
+      const nextGallery = currentGallery.map((item, index) => ({
+        ...item,
+        sortOrder: item.sortOrder ?? index,
+        isCover: item.mediaAssetId === media.id,
+      }));
+
+      if (existingIndex === -1) {
+        nextGallery.push({
+          ...mapMediaAssetToGalleryFormValue(media, currentGallery.length),
+          isCover: true,
+        });
+      }
+
+      return nextGallery;
+    });
+  };
 
   const handleSubmit = async (submitEvent: React.FormEvent<HTMLFormElement>) => {
     submitEvent.preventDefault();
@@ -57,10 +91,30 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
     const nextErrors = validateEventForm(values);
     setErrors(nextErrors);
 
+    if (isUploadingImage) {
+      const message = 'Aguarde o envio da imagem antes de salvar o evento.';
+      setFeedback({
+        type: 'error',
+        message,
+      });
+      showToast({
+        type: 'error',
+        title: 'Não foi possível salvar',
+        message,
+      });
+      return;
+    }
+
     if (Object.keys(nextErrors).length) {
+      const message = getValidationSummary(nextErrors);
       setFeedback({
         type: 'error',
         message: 'Revise os campos destacados antes de salvar o evento.',
+      });
+      showToast({
+        type: 'error',
+        title: 'Campos obrigatórios pendentes',
+        message,
       });
       return;
     }
@@ -72,9 +126,14 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
         await createEvent(values);
       }
 
+      const successMessage = event ? 'Edição realizada com sucesso.' : 'Criação de evento com sucesso.';
       setFeedback({
         type: 'success',
-        message: event ? 'Evento atualizado com sucesso.' : 'Evento criado com sucesso.',
+        message: successMessage,
+      });
+      showToast({
+        type: 'success',
+        title: successMessage,
       });
       setErrors({});
 
@@ -88,22 +147,34 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
     } catch (error) {
       const apiValidationErrors = getApiValidationErrors(error);
       if (Object.keys(apiValidationErrors).length > 0) {
+        const message = getValidationSummary(apiValidationErrors);
         setErrors(apiValidationErrors);
         setFeedback({
           type: 'error',
-          message: 'Há erros de validação retornados pelo servidor.',
+          message: 'Revise os campos destacados.',
+        });
+        showToast({
+          type: 'error',
+          title: 'Campos obrigatórios pendentes',
+          message,
         });
       } else {
+        const message = getApiErrorMessage(error, 'Falha ao salvar o evento.');
         setFeedback({
           type: 'error',
-          message: getApiErrorMessage(error, 'Falha ao salvar o evento.'),
+          message,
+        });
+        showToast({
+          type: 'error',
+          title: 'Não foi possível salvar',
+          message,
         });
       }
     }
   };
 
   if (isLoadingEvent) {
-    return <div className="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-8 text-sm text-slate-500">Carregando dados completos do evento...</div>;
+    return <div className="rounded-md border border-slate-200 bg-slate-50 px-5 py-8 text-sm text-slate-500">Carregando dados completos do evento...</div>;
   }
 
   return (
@@ -115,6 +186,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
           error={errors.title}
           id="event-title"
           label="Título do evento"
+          requiredMark
           onChange={(evt) => {
             setFieldValue('title', evt.target.value);
           }}
@@ -123,9 +195,9 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
         />
         <TextInput
           error={errors.slug}
-          hint="Opcional para futura gestão de URLs amigáveis."
+          hint="Opcional. Deixe vazio para gerar automaticamente."
           id="event-slug"
-          label="Slug"
+          label="Endereço amigável"
           onChange={(evt) => {
             setFieldValue('slug', evt.target.value);
           }}
@@ -139,6 +211,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
           error={errors.cityId}
           id="event-city"
           label="Cidade"
+          requiredMark
           onChange={(evt) => {
             setFieldValue('cityId', evt.target.value);
           }}
@@ -149,7 +222,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
           error={errors.externalUrl}
           hint="Link opcional para ingressos ou página oficial."
           id="event-external-url"
-          label="URL externa"
+          label="Link externo"
           onChange={(evt) => {
             setFieldValue('externalUrl', evt.target.value);
           }}
@@ -161,9 +234,11 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
 
       <div className="grid gap-5 md:grid-cols-2">
         <TextInput
+          className="admin-date-input"
           error={errors.startsAt}
           id="event-starts-at"
           label="Início"
+          requiredMark
           onChange={(evt) => {
             setFieldValue('startsAt', evt.target.value);
           }}
@@ -171,6 +246,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
           value={values.startsAt}
         />
         <TextInput
+          className="admin-date-input"
           error={errors.endsAt}
           hint="Opcional. Use quando o evento tiver encerramento definido."
           id="event-ends-at"
@@ -187,6 +263,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
         error={errors.description}
         id="event-description"
         label="Descrição"
+        requiredMark
         onChange={(evt) => {
           setFieldValue('description', evt.target.value);
         }}
@@ -196,27 +273,29 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
 
       <ImageUploadField
         error={errors.coverImage}
-        hint="Aceita URL manual ou upload real para o painel administrativo."
+        hint="Informe um link ou envie uma imagem."
         id="event-cover-image"
         label="Imagem de capa"
         onChange={(value) => {
           setFieldValue('coverImage', value);
         }}
         onUpload={uploadAdminMedia}
+        onUploadComplete={syncUploadedCoverWithGallery}
+        onUploadStateChange={handleUploadStateChange}
         showAltText={false}
         uploadCollection="cover"
         value={values.coverImage}
       />
 
-      <section className="space-y-4 rounded-[28px] border border-slate-200 bg-slate-50/70 p-5">
+      <section className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-emerald-700">Galeria</p>
-            <h2 className="mt-1 text-xl font-black text-slate-900">Imagens complementares</h2>
-            <p className="mt-1 text-sm text-slate-500">Associe mídias do painel, ajuste ordem editorial e marque a capa quando desejar usar MediaAsset.</p>
+            <p className="text-xs font-semibold uppercase text-emerald-700">Galeria</p>
+            <h2 className="mt-1 text-lg font-semibold text-slate-900">Imagens complementares</h2>
+            <p className="mt-1 text-sm text-slate-500">Associe imagens, ajuste a ordem e marque a capa do evento.</p>
           </div>
           <button
-            className="inline-flex items-center gap-2 self-start rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
+            className="inline-flex h-10 items-center gap-2 self-start rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:border-emerald-300 hover:text-emerald-700"
             onClick={addGalleryItem}
             type="button"
           >
@@ -226,16 +305,16 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
         </div>
 
         {values.gallery.length ? (
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4">
             {values.gallery.map((item, index) => (
-              <article key={item.id} className="space-y-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+              <article key={item.id} className="space-y-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-slate-800">Imagem {index + 1}</p>
                     <p className="text-xs text-slate-500">Controle a ordem e defina a capa editorial da galeria.</p>
                   </div>
                   <button
-                    className="inline-flex items-center gap-2 rounded-full border border-rose-200 px-3 py-2 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                    className="inline-flex h-9 items-center gap-2 rounded-md border border-rose-200 px-3 text-sm font-semibold text-rose-600 transition-colors hover:bg-rose-50"
                     onClick={() => {
                       removeGalleryItem(item.id);
                     }}
@@ -250,7 +329,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
                   allowManualUrl={false}
                   altText={item.altText}
                   error={getNestedError(errors, `gallery.${index}.mediaAssetId`)}
-                  hint="Use o upload do painel para manter o vínculo com MediaAsset."
+                  hint="Envie a imagem para usar na galeria."
                   id={`event-gallery-${item.id}`}
                   label="Arquivo da galeria"
                   onAltTextChange={(value) => {
@@ -276,6 +355,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
                     }));
                   }}
                   onUpload={uploadAdminMedia}
+                  onUploadStateChange={handleUploadStateChange}
                   uploadCollection="gallery"
                   value={item.url}
                 />
@@ -308,14 +388,14 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
             ))}
           </div>
         ) : (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-sm text-slate-500">
+          <div className="rounded-md border border-dashed border-slate-300 bg-white px-6 py-10 text-center text-sm text-slate-500">
             Nenhuma imagem complementar adicionada.
           </div>
         )}
       </section>
 
       <TagMultiSelect
-        hint="Estrutura pronta para filtros editoriais e curadoria posterior."
+        hint="Selecione temas para facilitar a busca e organização."
         label="Tags de interesse"
         onChange={(nextValues) => {
           setFieldValue('interestTagIds', nextValues);
@@ -327,7 +407,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
       <div className="grid gap-4 md:grid-cols-2">
         <ToggleField
           checked={values.isFeatured}
-          description="Marca o evento como destaque para futuras vitrines editoriais."
+          description="Marca o evento como destaque no portal."
           id="event-featured"
           label="Destaque"
           onChange={(evt) => {
@@ -336,7 +416,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
         />
         <ToggleField
           checked={values.isPublished}
-          description="Libera o evento para consumo público quando o backend também o disponibilizar."
+          description="Quando ativo, o evento aparece no portal público."
           id="event-published"
           label="Publicado"
           onChange={(evt) => {
@@ -362,7 +442,7 @@ export const EventForm = ({ cityOptions, event, isLoadingEvent = false, tagOptio
           disabled={isSubmitting}
           type="submit"
         >
-          {isSubmitting ? 'Salvando...' : event ? 'Atualizar evento' : 'Criar evento'}
+          {isUploadingImage ? 'Enviando imagem...' : isSubmitting ? 'Salvando...' : event ? 'Atualizar evento' : 'Criar evento'}
         </button>
       </FormActions>
     </form>

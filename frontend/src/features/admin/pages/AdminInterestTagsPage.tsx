@@ -1,12 +1,13 @@
-import { PencilLine, Plus, Search, Shapes, Trash2 } from 'lucide-react';
+import { CalendarRange, MapPinned, PencilLine, Plus, Shapes, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { InterestTag } from '../../../shared/types/api';
 import { EmptyState } from '../../../shared/components/EmptyState';
 import { ErrorState } from '../../../shared/components/ErrorState';
 import { LoadingState } from '../../../shared/components/LoadingState';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
+import { useToast } from '../../../shared/components/toast/toastContext';
 import { getApiErrorMessage } from '../../../shared/lib/api/getApiErrorMessage';
-import { AdminDataTable, AdminKpi, AdminPage, AdminSearchToolbar, AdminSurface, AdminSideSheet } from '../components/AdminUi';
+import { AdminConfirmDialog, AdminDataTable, AdminKpi, AdminPage, AdminSearchToolbar, AdminSurface, AdminSideSheet } from '../components/AdminUi';
 import { adminButtonClassName, adminInputClassName } from '../components/adminUiStyles';
 import { InterestTagForm } from '../forms/InterestTagForm';
 import { useAdminInterestTagMutations, useAdminInterestTags } from '../hooks/useAdminInterestTags';
@@ -21,16 +22,18 @@ const getTagUsageLabel = (tag: InterestTag) => {
     return `${tag.citiesCount ?? 0} cidades • ${tag.eventsCount ?? 0} eventos`;
   }
 
-  return 'Uso não informado pela API';
+  return 'Sem uso informado';
 };
 
 export const AdminInterestTagsPage = () => {
   const { data: tags, isLoading, isError } = useAdminInterestTags();
   const { deleteInterestTag, deleting } = useAdminInterestTagMutations();
   const [selectedTag, setSelectedTag] = useState<InterestTag | null>(null);
+  const [pendingDeleteTagId, setPendingDeleteTagId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const [search, setSearch] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const { showToast } = useToast();
 
   const filteredTags = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -43,40 +46,45 @@ export const AdminInterestTagsPage = () => {
   }, [search, tags]);
 
   if (isLoading) {
-    return <LoadingState label="Carregando base administrativa de tags..." />;
+    return <LoadingState label="Carregando tags..." />;
   }
 
   if (isError) {
     return (
       <ErrorState
-        description="Verifique a autenticação administrativa e a disponibilidade da API."
+        description="Tente novamente em instantes ou verifique seu acesso ao painel."
         title="Não foi possível carregar o módulo de tags"
       />
     );
   }
 
   const handleDelete = async (tagId: number) => {
-    const confirmed = window.confirm('Tem certeza que deseja excluir esta tag?');
-
-    if (!confirmed) {
-      return;
-    }
-
     try {
       await deleteInterestTag(tagId);
       setFeedback({
         type: 'success',
         message: 'Tag removida com sucesso.',
       });
+      showToast({
+        type: 'success',
+        title: 'Tag removida com sucesso.',
+      });
+      setPendingDeleteTagId(null);
 
       if (selectedTag?.id === tagId) {
         setIsFormOpen(false);
         setSelectedTag(null);
       }
     } catch (error) {
+      const message = getApiErrorMessage(error, 'Falha ao remover a tag.');
       setFeedback({
         type: 'error',
-        message: getApiErrorMessage(error, 'Falha ao remover a tag.'),
+        message,
+      });
+      showToast({
+        type: 'error',
+        title: 'Não foi possível remover',
+        message,
       });
     }
   };
@@ -91,7 +99,7 @@ export const AdminInterestTagsPage = () => {
     <AdminPage
       actions={
         <button
-          className={adminButtonClassName.primary}
+          className={adminButtonClassName.primaryAction}
           onClick={() => handleOpenForm(null)}
           type="button"
         >
@@ -99,17 +107,17 @@ export const AdminInterestTagsPage = () => {
           Nova tag
         </button>
       }
-      description="Mantenha o vocabulário editorial com uma leitura mais parecida com a referência, mas usando a mesma base real de tags do sistema."
+      description="Organize os temas usados para classificar cidades e eventos."
       eyebrow="Taxonomia editorial"
       title="Tags"
     >
       <section className="grid gap-4 md:grid-cols-3">
         <AdminKpi hint="Total de tags cadastradas." icon={<Shapes className="h-5 w-5" />} label="Tags carregadas" value={tags?.length ?? 0} />
-        <AdminKpi hint="Base disponível para classificação de cidades." icon={<Search className="h-5 w-5" />} label="Com uso em cidades" value={(tags ?? []).filter((tag) => (tag.citiesCount ?? 0) > 0).length} />
-        <AdminKpi hint="Base disponível para classificação de eventos." icon={<PencilLine className="h-5 w-5" />} label="Com uso em eventos" value={(tags ?? []).filter((tag) => (tag.eventsCount ?? 0) > 0).length} />
+        <AdminKpi hint="Tags usadas para classificar cidades." icon={<MapPinned className="h-5 w-5" />} label="Com uso em cidades" value={(tags ?? []).filter((tag) => (tag.citiesCount ?? 0) > 0).length} />
+        <AdminKpi hint="Tags usadas para classificar eventos." icon={<CalendarRange className="h-5 w-5" />} label="Com uso em eventos" value={(tags ?? []).filter((tag) => (tag.eventsCount ?? 0) > 0).length} />
       </section>
 
-      <AdminSurface description="Busque por nome ou slug e revise o uso das tags na base." meta={`${filteredTags.length} itens`} title="Tags cadastradas">
+      <AdminSurface description="Busque por nome ou endereço amigável e revise o uso das tags." meta={`${filteredTags.length} itens`} title="Tags cadastradas">
         <AdminSearchToolbar
           searchInput={
             <input
@@ -117,7 +125,7 @@ export const AdminInterestTagsPage = () => {
               onChange={(event) => {
                 setSearch(event.target.value);
               }}
-              placeholder="Buscar por nome ou slug..."
+              placeholder="Buscar por nome ou endereço..."
               type="text"
               value={search}
             />
@@ -131,7 +139,7 @@ export const AdminInterestTagsPage = () => {
         <div className="mt-6">
           <AdminDataTable
             actions={(tag) => (
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-wrap justify-start gap-2 sm:justify-end">
                 <button
                   className={adminButtonClassName.secondary}
                   onClick={() => handleOpenForm(tag)}
@@ -144,7 +152,7 @@ export const AdminInterestTagsPage = () => {
                   className={adminButtonClassName.danger}
                   disabled={deleting}
                   onClick={() => {
-                    void handleDelete(tag.id);
+                    setPendingDeleteTagId(tag.id);
                   }}
                   type="button"
                 >
@@ -161,7 +169,7 @@ export const AdminInterestTagsPage = () => {
               },
               {
                 key: 'slug',
-                label: 'Slug',
+                label: 'Endereço',
                 render: (tag) => tag.slug,
               },
               {
@@ -190,6 +198,19 @@ export const AdminInterestTagsPage = () => {
       >
         <InterestTagForm key={selectedTag?.id ?? 'new-tag'} tag={selectedTag} onSuccess={() => setIsFormOpen(false)} />
       </AdminSideSheet>
+
+      <AdminConfirmDialog
+        description="Esta ação removerá a tag cadastrada e poderá afetar classificações associadas."
+        isConfirming={deleting}
+        isOpen={pendingDeleteTagId !== null}
+        onClose={() => setPendingDeleteTagId(null)}
+        onConfirm={() => {
+          if (pendingDeleteTagId !== null) {
+            void handleDelete(pendingDeleteTagId);
+          }
+        }}
+        title="Excluir tag?"
+      />
     </AdminPage>
   );
 };

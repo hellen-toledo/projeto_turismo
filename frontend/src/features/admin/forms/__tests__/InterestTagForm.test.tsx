@@ -24,7 +24,7 @@ describe('InterestTagForm', () => {
     mockUpdateInterestTag.mockReset();
   });
 
-  it('exibe erro retornado pelo backend', async () => {
+  it('exibe erro de validação', async () => {
     const user = userEvent.setup();
     mockCreateInterestTag.mockRejectedValue({
       isAxiosError: true,
@@ -44,7 +44,7 @@ describe('InterestTagForm', () => {
 
     await user.click(screen.getByRole('button', { name: 'Criar tag' }));
 
-    expect(await screen.findByText('Há erros de validação retornados pelo servidor.')).toBeInTheDocument();
+    expect(await screen.findByText('Revise os campos destacados.')).toBeInTheDocument();
     expect(screen.getByText('Slug já está em uso.')).toBeInTheDocument();
   });
 });

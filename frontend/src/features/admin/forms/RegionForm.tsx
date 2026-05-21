@@ -3,11 +3,13 @@ import type { RegionSummary } from '../../../shared/types/api';
 import { FormActions } from '../../../shared/components/form/FormActions';
 import { FormAlert } from '../../../shared/components/form/FormAlert';
 import { TextInput } from '../../../shared/components/form/TextInput';
+import { useToast } from '../../../shared/components/toast/toastContext';
 import { getApiErrorMessage, getApiValidationErrors } from '../../../shared/lib/api/getApiErrorMessage';
 import { adminButtonClassName } from '../components/adminUiStyles';
 import { useAdminRegionMutations } from '../hooks/useAdminRegions';
 import type { AdminFeedback, AdminValidationErrors, RegionFormValues } from '../types/admin';
 import { createEmptyRegionForm, mapRegionToFormValues } from '../types/admin';
+import { getValidationSummary } from './validationSummary';
 
 interface RegionFormProps {
   region?: RegionSummary | null;
@@ -20,6 +22,7 @@ export const RegionForm = ({ region, onSuccess }: RegionFormProps) => {
   const [errors, setErrors] = useState<AdminValidationErrors>({});
   const [feedback, setFeedback] = useState<AdminFeedback | null>(null);
   const { createRegion, updateRegion, creating, updating } = useAdminRegionMutations();
+  const { showToast } = useToast();
 
   const isSubmitting = creating || updating;
 
@@ -35,9 +38,15 @@ export const RegionForm = ({ region, onSuccess }: RegionFormProps) => {
     setErrors(nextErrors);
 
     if (Object.keys(nextErrors).length) {
+      const message = getValidationSummary(nextErrors);
       setFeedback({
         type: 'error',
         message: 'Revise os campos destacados antes de salvar a região.',
+      });
+      showToast({
+        type: 'error',
+        title: 'Campos obrigatórios pendentes',
+        message,
       });
       return;
     }
@@ -49,9 +58,14 @@ export const RegionForm = ({ region, onSuccess }: RegionFormProps) => {
         await createRegion(values);
       }
 
+      const successMessage = region ? 'Edição realizada com sucesso.' : 'Criação de região com sucesso.';
       setFeedback({
         type: 'success',
-        message: region ? 'Região atualizada com sucesso.' : 'Região criada com sucesso.',
+        message: successMessage,
+      });
+      showToast({
+        type: 'success',
+        title: successMessage,
       });
       setErrors({});
 
@@ -66,15 +80,27 @@ export const RegionForm = ({ region, onSuccess }: RegionFormProps) => {
       const apiValidationErrors = getApiValidationErrors(error);
 
       if (Object.keys(apiValidationErrors).length > 0) {
+        const message = getValidationSummary(apiValidationErrors);
         setErrors(apiValidationErrors);
         setFeedback({
           type: 'error',
-          message: 'Há erros de validação retornados pelo servidor.',
+          message: 'Revise os campos destacados.',
+        });
+        showToast({
+          type: 'error',
+          title: 'Campos obrigatórios pendentes',
+          message,
         });
       } else {
+        const message = getApiErrorMessage(error, 'Falha ao salvar a região.');
         setFeedback({
           type: 'error',
-          message: getApiErrorMessage(error, 'Falha ao salvar a região.'),
+          message,
+        });
+        showToast({
+          type: 'error',
+          title: 'Não foi possível salvar',
+          message,
         });
       }
     }
@@ -88,6 +114,7 @@ export const RegionForm = ({ region, onSuccess }: RegionFormProps) => {
         error={errors.name}
         id="region-name"
         label="Nome da região"
+        requiredMark
         onChange={(event) => {
           setValues((current) => ({
             ...current,

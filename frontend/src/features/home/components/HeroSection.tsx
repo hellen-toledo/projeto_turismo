@@ -1,7 +1,15 @@
+import { Fish, Leaf, Mountain, Search, Waves } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const categories = ['Ecoturismo', 'Pesca Esportiva', 'Lagos', 'Trilhas'];
+const categories = [
+  { label: 'Ecoturismo', icon: Leaf },
+  { label: 'Pesca Esportiva', icon: Fish },
+  { label: 'Lagos', icon: Waves },
+  { label: 'Trilhas', icon: Mountain },
+];
+
+const heroImageUrl = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=85&w=2400&auto=format&fit=crop';
 
 export const HeroSection = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -21,51 +29,57 @@ export const HeroSection = () => {
   };
 
   return (
-    <section className="mb-10 py-12 text-center md:py-20 relative">
-      {/* Decorative background image or gradient for the "Hero" feel */}
-      <div className="absolute inset-0 z-0 bg-gradient-to-b from-green-900/20 to-transparent pointer-events-none rounded-3xl" />
-      
-      <div className="relative z-10">
-        <h1 className="mb-6 text-4xl font-bold leading-tight text-white md:text-5xl lg:text-6xl">
-          Onde a Aventura Encontra a <span className="text-green-500">Alma do Cerrado</span>
+    <section
+      className="relative left-1/2 -mt-24 mb-16 flex min-h-screen w-screen -translate-x-1/2 items-center justify-center overflow-hidden bg-gray-950 bg-cover bg-center px-4 text-center"
+      style={{ backgroundImage: `url('${heroImageUrl}')` }}
+    >
+      <div className="absolute inset-0 bg-black/60" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-gray-950 to-transparent" />
+
+      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col items-center pt-24">
+        <h1 className="mb-5 text-4xl font-extrabold leading-tight text-white md:text-6xl lg:text-7xl">
+          Descubra o Norte Goiano
         </h1>
-        <p className="mx-auto mb-12 max-w-2xl text-xl text-gray-300">
-          Explore as maravilhas do Norte Goiano, da Chapada dos Veadeiros às águas do Lago Serra da Mesa.
+        <p className="mx-auto mb-10 max-w-3xl text-lg text-gray-100 md:text-2xl">
+          Onde a Aventura Encontra a Alma do Cerrado
         </p>
 
-        <div className="mx-auto flex w-full max-w-4xl flex-col items-center">
-          <form onSubmit={handleSearch} className="relative mb-8 flex w-full items-center rounded-full bg-gray-900 shadow-lg border border-gray-700">
-            <div className="pl-6 text-gray-500">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-
+        <div className="mx-auto flex w-full max-w-3xl flex-col items-center">
+          <form
+            onSubmit={handleSearch}
+            className="relative mb-7 flex h-16 w-full items-center rounded-full bg-white shadow-[0_22px_60px_rgba(0,0,0,0.28)]"
+          >
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Para onde você quer ir? (Ex: Minaçu, Chapada...)"
-              className="w-full rounded-full bg-transparent py-4 pl-4 pr-32 text-lg text-gray-100 placeholder-gray-500 focus:outline-none"
+              className="h-full min-w-0 flex-1 rounded-full bg-transparent pl-6 pr-20 text-sm text-gray-900 placeholder-gray-500 focus:outline-none md:pr-24"
             />
 
-            <button type="submit" className="absolute bottom-2 right-2 top-2 rounded-full bg-green-600 px-8 font-semibold text-white shadow-md transition-colors hover:bg-green-500 focus:outline-none focus:ring-2 focus:ring-green-400">
-              Buscar
+            <button
+              type="submit"
+              aria-label="Buscar destinos"
+              className="absolute right-2 top-2 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md transition-colors hover:bg-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-300"
+            >
+              <Search className="h-5 w-5" />
             </button>
           </form>
 
-          <div className="flex flex-wrap justify-center gap-3 md:gap-4">
-            {categories.map((category) => (
+          <div className="mb-8 flex flex-wrap justify-center gap-3">
+            {categories.map(({ label, icon: Icon }) => (
               <button
-                key={category}
+                key={label}
                 type="button"
-                onClick={() => handleTagClick(category)}
-                className="rounded-full border border-gray-700 bg-gray-800 px-6 py-2 font-medium text-gray-300 shadow-sm transition-all hover:border-green-500 hover:bg-gray-700 hover:text-green-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                onClick={() => handleTagClick(label)}
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-4 text-xs font-semibold text-gray-900 shadow-sm transition hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-300"
               >
-                {category}
+                <Icon className="h-3.5 w-3.5" />
+                {label}
               </button>
             ))}
           </div>
+
         </div>
       </div>
     </section>

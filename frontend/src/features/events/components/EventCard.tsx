@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { Event } from '../../../shared/types/api';
+import { resolveAssetUrl } from '../../../shared/lib/api/resolveAssetUrl';
 import { formatEventDate } from '../../../shared/lib/utils/formatEventDate';
 
 interface EventCardProps {
@@ -22,12 +23,13 @@ const hasUsableExternalUrl = (value: string | null) => {
 export const EventCard = ({ event }: EventCardProps) => {
   const { day, month } = formatEventDate(event.startsAt);
   const showExternalLink = hasUsableExternalUrl(event.externalUrl);
+  const coverImage = resolveAssetUrl(event.coverImage);
 
   return (
     <div className="flex h-full flex-col rounded-2xl border border-gray-800 bg-gray-900 p-6 shadow-sm transition-shadow hover:shadow-md hover:border-gray-700">
       <div className="mb-6 overflow-hidden rounded-2xl border border-gray-800 bg-gray-950">
         <img
-          src={event.coverImage ?? 'https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=1200&auto=format&fit=crop'}
+          src={coverImage ?? 'https://images.unsplash.com/photo-1511578314322-379afb476865?q=80&w=1200&auto=format&fit=crop'}
           alt={event.coverImage ? `Imagem do evento ${event.title}` : `Imagem ilustrativa do evento ${event.title}`}
           className="h-52 w-full object-cover"
         />

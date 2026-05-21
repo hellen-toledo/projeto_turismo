@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { EventCard } from '../features/events/components/EventCard';
 import { useEvents } from '../features/events/hooks/useEvents';
@@ -29,7 +30,7 @@ export const EventsPage = () => {
       />
 
       <form
-        className="mb-8 grid gap-3 md:grid-cols-[2fr_1fr_1fr_auto_auto_auto]"
+        className="mb-8 grid items-stretch gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto_auto]"
         onSubmit={(event) => {
           event.preventDefault();
           const formData = new FormData(event.currentTarget);
@@ -65,35 +66,47 @@ export const EventsPage = () => {
         }}
       >
         <input
-          className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
+          className="h-12 w-full rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm text-gray-100 placeholder-gray-500"
           defaultValue={filters.search ?? ''}
           name="q"
           placeholder="Buscar evento ou descrição"
           type="text"
         />
         <input
-          className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
+          className="h-12 w-full rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm text-gray-100 placeholder-gray-500"
           defaultValue={filters.city ?? ''}
           name="city"
           placeholder="Filtrar por cidade"
           type="text"
         />
         <input
-          className="rounded-2xl border border-slate-200 px-4 py-3 text-sm text-slate-700"
+          className="h-12 w-full rounded-2xl border border-gray-800 bg-gray-900 px-4 text-sm text-gray-100 placeholder-gray-500"
           defaultValue={filters.tag ?? ''}
           name="tag"
           placeholder="Filtrar por tag"
           type="text"
         />
-        <label className="flex items-center gap-2 rounded-2xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-300">
-          <input defaultChecked={filters.featured === true} name="featured" type="checkbox" />
+        <label className="group flex h-12 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm font-semibold text-slate-200 transition-colors hover:border-emerald-500/70">
+          <input className="peer sr-only" defaultChecked={filters.featured === true} name="featured" type="checkbox" />
+          <span
+            aria-hidden="true"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-900 text-white transition-colors peer-checked:border-emerald-500 peer-checked:bg-emerald-500 peer-checked:[&>svg]:opacity-100 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/40"
+          >
+            <Check className="h-3.5 w-3.5 opacity-0 transition-opacity" />
+          </span>
           Destaques
         </label>
-        <label className="flex items-center gap-2 rounded-2xl border border-gray-800 bg-gray-900 px-4 py-3 text-sm text-gray-300">
-          <input defaultChecked={searchParams.get('future') !== '0'} name="future" type="checkbox" />
+        <label className="group flex h-12 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-2xl border border-slate-800 bg-slate-950 px-4 text-sm font-semibold text-slate-200 transition-colors hover:border-emerald-500/70">
+          <input className="peer sr-only" defaultChecked={searchParams.get('future') !== '0'} name="future" type="checkbox" />
+          <span
+            aria-hidden="true"
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md border border-slate-600 bg-slate-900 text-white transition-colors peer-checked:border-emerald-500 peer-checked:bg-emerald-500 peer-checked:[&>svg]:opacity-100 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-300/40"
+          >
+            <Check className="h-3.5 w-3.5 opacity-0 transition-opacity" />
+          </span>
           Futuros
         </label>
-        <button className="rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white" type="submit">
+        <button className="inline-flex h-12 items-center justify-center rounded-2xl bg-emerald-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500" type="submit">
           Aplicar
         </button>
       </form>

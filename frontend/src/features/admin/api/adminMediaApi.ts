@@ -27,11 +27,7 @@ export const uploadAdminMedia = async (file: File, metadata: UploadAdminMediaMet
     formData.append('altText', metadata.altText.trim());
   }
 
-  const { data } = await apiClient.post(apiPaths.admin.media, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
+  const { data } = await apiClient.post(apiPaths.admin.media, formData);
 
   return data;
 };

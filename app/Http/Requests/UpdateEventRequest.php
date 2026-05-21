@@ -28,7 +28,7 @@ class UpdateEventRequest extends FormRequest
             'description' => ['sometimes', 'string'],
             'startsAt' => ['sometimes', 'date'],
             'endsAt' => ['nullable', 'date', 'after_or_equal:startsAt'],
-            'coverImage' => ['nullable', 'url', 'max:2048'],
+            'coverImage' => $this->coverImageRules(),
             'externalUrl' => ['nullable', 'url', 'max:2048'],
             'cityId' => ['sometimes', 'integer', 'exists:cities,id'],
             'isFeatured' => ['sometimes', 'boolean'],

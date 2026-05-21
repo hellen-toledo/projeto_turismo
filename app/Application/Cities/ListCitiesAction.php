@@ -17,7 +17,9 @@ class ListCitiesAction
         $tagId = $filters['tag_id'] ?? null;
 
         return City::query()
-            ->with(['region', 'interestTags'])
+            ->with(['region', 'interestTags', 'galleryMediaAssets' => function ($query) {
+                $query->wherePivot('is_cover', true);
+            }])
             ->when(
                 ! $includeUnpublished,
                 fn ($query) => $query->where('is_published', true),
@@ -37,7 +39,7 @@ class ListCitiesAction
                 ! isset($regionId) && filled($region),
                 fn ($query) => $query->whereHas('region', function ($regionQuery) use ($region): void {
                     $regionQuery
-                        ->where('name', $region)
+                        ->where('name', 'like', "%{$region}%")
                         ->when(is_numeric($region), fn ($numericQuery) => $numericQuery->orWhere('id', (int) $region));
                 })
             )
@@ -49,8 +51,8 @@ class ListCitiesAction
                 ! isset($tagId) && filled($tag),
                 fn ($query) => $query->whereHas('interestTags', function ($tagQuery) use ($tag): void {
                     $tagQuery
-                        ->where('slug', $tag)
-                        ->orWhere('name', $tag)
+                        ->where('slug', 'like', "%{$tag}%")
+                        ->orWhere('name', 'like', "%{$tag}%")
                         ->when(is_numeric($tag), fn ($numericQuery) => $numericQuery->orWhere('id', (int) $tag));
                 })
             )

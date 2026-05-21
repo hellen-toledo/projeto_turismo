@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class MediaGalleryItemResource extends JsonResource
 {
@@ -14,7 +13,7 @@ class MediaGalleryItemResource extends JsonResource
 
         return [
             'id' => $this->id,
-            'url' => Storage::disk($this->disk)->url($this->path),
+            'url' => '/storage/'.ltrim($this->path, '/'),
             'altText' => $this->pivot?->alt_text ?? $this->alt_text,
             'sortOrder' => $this->pivot?->sort_order,
             'isCover' => (bool) ($this->pivot?->is_cover ?? false),

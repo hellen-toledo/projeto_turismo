@@ -2,7 +2,7 @@
     "$schema": "https://www.schemastore.org/package.json",
     "private": true,
     "scripts": {
-        "backend:serve": "php artisan serve",
+        "backend:serve": "php -d upload_max_filesize=15M -d post_max_size=16M artisan serve",
         "backend:test": "php artisan test",
         "backend:lint": "vendor/bin/pint --test",
         "frontend:dev": "npm --prefix frontend run dev",
@@ -12,7 +12,7 @@
         "build": "npm run frontend:build",
         "test": "npm run backend:test && npm run frontend:test",
         "lint": "npm run backend:lint && npm run frontend:lint",
-        "dev": "concurrently -c \"#93c5fd,#fdba74\" \"php artisan serve\" \"npm --prefix frontend run dev\" --names=api,frontend --kill-others"
+        "dev": "concurrently -c \"#93c5fd,#fdba74\" \"php -d upload_max_filesize=15M -d post_max_size=16M artisan serve\" \"npm --prefix frontend run dev\" --names=api,frontend --kill-others"
     },
     "devDependencies": {
         "concurrently": "^9.0.1"
