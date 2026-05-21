@@ -162,7 +162,7 @@ class UnsplashEventsSeeder extends Seeder
         foreach ($events as $index => $eventData) {
             $cityId = $cities[$eventData['city_slug']] ?? null;
 
-            if (!$cityId) {
+            if (! $cityId) {
                 continue; // Pula se a cidade não existir
             }
 
@@ -184,7 +184,7 @@ class UnsplashEventsSeeder extends Seeder
             );
 
             // Sincronizar tags
-            if (!empty($eventData['tags'])) {
+            if (! empty($eventData['tags'])) {
                 $tagIds = [];
                 foreach ($eventData['tags'] as $tagSlug) {
                     if (isset($tags[$tagSlug])) {
